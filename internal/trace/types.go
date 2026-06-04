@@ -14,7 +14,10 @@ type Envelope struct {
 	Request   Request    `json:"request"`
 	Queries   []Query    `json:"queries"`
 	Logs      []Log      `json:"logs"`
+	Dumps     []Dump     `json:"dumps"`
+	Measures  []Measure  `json:"measures"`
 	Exception *Exception `json:"exception"`
+	Octane    *Octane    `json:"octane"`
 
 	// NPlusOne is server-derived (not sent by the client), filled by analyze.
 	NPlusOne []NPlusOne `json:"n_plus_one,omitempty"`
@@ -45,6 +48,38 @@ type Log struct {
 	Message  string         `json:"message"`
 	Context  map[string]any `json:"context"`
 	OffsetMs float64        `json:"offset_ms"`
+}
+
+// Octane carries worker-level signals (Octane only; ~inert under php-fpm).
+type Octane struct {
+	Running             bool     `json:"running"`
+	WorkerPID           int      `json:"worker_pid"`
+	WorkerRequests      int      `json:"worker_requests"`
+	WorkerMemoryStartMB float64  `json:"worker_memory_start_mb"`
+	MemoryGrowthMB      float64  `json:"memory_growth_mb"`
+	Bindings            int      `json:"bindings"`
+	NewBindings         []string `json:"new_bindings"`
+}
+
+// Dump is a value recorded via the debugd() helper.
+type Dump struct {
+	Label    string  `json:"label"`
+	Type     string  `json:"type"`
+	Value    string  `json:"value"`
+	Caller   string  `json:"caller"`
+	OffsetMs float64 `json:"offset_ms"`
+}
+
+// Measure is a benchmarked block (debugd()->bench()) or a task from a
+// concurrently() batch. Spans in the same batch share Group; Concurrent is true
+// when they actually ran in parallel (under Octane).
+type Measure struct {
+	Label      string  `json:"label"`
+	DurationMs float64 `json:"duration_ms"`
+	Caller     string  `json:"caller"`
+	OffsetMs   float64 `json:"offset_ms"`
+	Concurrent bool    `json:"concurrent"`
+	Group      string  `json:"group"`
 }
 
 type Exception struct {

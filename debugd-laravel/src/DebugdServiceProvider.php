@@ -27,6 +27,10 @@ final class DebugdServiceProvider extends ServiceProvider
         // exist regardless of env-read timing. Only the *active* listeners
         // (boot) are gated on enabled(); that is what "inert" means (§4).
 
+        // Worker-persistent (true singleton) so it survives across Octane
+        // requests — the basis for per-worker request count and leak detection.
+        $this->app->singleton(WorkerState::class);
+
         // Per-request timing anchored to the SAPI request start (before boot).
         $this->app->scoped(Timing::class, fn () => new Timing(
             (float) ($_SERVER['REQUEST_TIME_FLOAT'] ?? microtime(true)),
@@ -49,6 +53,9 @@ final class DebugdServiceProvider extends ServiceProvider
         if (! $this->enabled()) {
             return;
         }
+
+        // Marker the debugd() helper checks — present only when recording.
+        $this->app->instance('debugd.recording', true);
 
         $kernel->prependMiddleware(TraceMiddleware::class);
         $this->captureQueries();
@@ -135,27 +142,10 @@ final class DebugdServiceProvider extends ServiceProvider
         }
     }
 
-    /**
-     * First application stack frame as `relative/path.php:line` — the N+1
-     * grouping anchor. Skips vendor frames AND debugd's own src frames (in a
-     * real install the latter live under vendor/ too, but when developing the
-     * package itself src/ is not). IGNORE_ARGS keeps the backtrace cheap.
-     */
+    /** First application stack frame — the N+1 grouping anchor. */
     private function caller(): string
     {
-        $base = base_path() . DIRECTORY_SEPARATOR;
-        $ownSrc = __DIR__ . DIRECTORY_SEPARATOR;
-
-        foreach (debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 30) as $frame) {
-            $file = $frame['file'] ?? '';
-            if ($file === ''
-                || str_starts_with($file, $ownSrc)
-                || str_contains($file, DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR)) {
-                continue;
-            }
-            return str_replace($base, '', $file) . ':' . ($frame['line'] ?? 0);
-        }
-        return 'unknown';
+        return \Debugd\Support\Caller::resolve();
     }
 
     private function enabled(): bool

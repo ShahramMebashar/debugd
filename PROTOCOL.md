@@ -39,6 +39,10 @@ One JSON object per HTTP request, POSTed to `/ingest` as NDJSON (one object per 
 | `queries[].bindings_count` | Count only by default. Raw bindings shipped only with `DEBUGD_CAPTURE_BINDINGS=true`. |
 | `queries[].caller` | First non-vendor stack frame, `relative/path.php:line`. N+1 grouping key with `sql`. |
 | `*.offset_ms` | Milliseconds since request start — drives the UI waterfall. |
+| `request.boot_ms` / `request.memory_mb` | Framework boot cost and peak memory (MB). |
+| `dumps[]` | Values recorded via `debugd($v)` — `{label,type,value,caller,offset_ms}`. |
+| `measures[]` | Benchmarks (`debugd()->bench()`) and concurrently() tasks — `{label,duration_ms,caller,offset_ms,concurrent,group}`. Same `group` = one batch; `concurrent` = ran in parallel. |
+| `octane` | Worker signals — `{running,worker_pid,worker_requests,worker_memory_start_mb,memory_growth_mb,bindings,new_bindings}`. `new_bindings` = container keys first seen after the worker's baseline request (leak suspects). `null` when unavailable. |
 | `exception` | `null` when none. |
 | `n_plus_one` | **Server-derived**, never sent by the client. |
 

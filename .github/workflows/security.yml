@@ -1,0 +1,108 @@
+name: security
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "17 9 * * 1"
+  workflow_dispatch:
+
+concurrency:
+  group: security-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  GO_VERSION: "1.25.11"
+
+jobs:
+  codeql-go:
+    name: CodeQL Go
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - uses: github/codeql-action/init@v3
+        with:
+          languages: go
+      - name: Build for analysis
+        run: |
+          mkdir -p web/dist
+          printf '<!doctype html>\n' > web/dist/index.html
+          go build ./cmd/debugd
+      - uses: github/codeql-action/analyze@v3
+        with:
+          category: /language:go
+
+  codeql-typescript:
+    name: CodeQL TypeScript
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: github/codeql-action/init@v3
+        with:
+          languages: javascript-typescript
+      - uses: github/codeql-action/analyze@v3
+        with:
+          category: /language:javascript-typescript
+
+  dependency-review:
+    name: Dependency review
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high
+
+  audits:
+    name: Dependency vulnerability audits
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - name: Run govulncheck
+        run: |
+          mkdir -p web/dist
+          printf '<!doctype html>\n' > web/dist/index.html
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+          govulncheck ./...
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+        working-directory: web
+      - run: npm audit --audit-level=high
+        working-directory: web
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          coverage: none
+          tools: composer:v2
+      - run: composer validate --no-check-lock --strict
+        working-directory: debugd-laravel
+      - run: composer install --prefer-dist --no-interaction --no-progress
+        working-directory: debugd-laravel
+      - run: composer audit --format=plain
+        working-directory: debugd-laravel

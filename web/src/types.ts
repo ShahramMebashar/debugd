@@ -46,6 +46,33 @@ export interface NPlusOne {
   suggestion: Suggestion;
 }
 
+export interface Octane {
+  running: boolean;
+  worker_pid: number;
+  worker_requests: number;
+  worker_memory_start_mb: number;
+  memory_growth_mb: number;
+  bindings: number;
+  new_bindings: string[];
+}
+
+export interface Dump {
+  label: string | null;
+  type: string;
+  value: string;
+  caller: string;
+  offset_ms: number;
+}
+
+export interface Measure {
+  label: string;
+  duration_ms: number;
+  caller: string;
+  offset_ms: number;
+  concurrent: boolean; // ran in parallel (Octane) vs sequentially
+  group: string; // batch id; same for one concurrently() call, "" for bench()
+}
+
 export interface Envelope {
   v: number;
   trace_id: string;
@@ -62,6 +89,9 @@ export interface Envelope {
   };
   queries: Query[];
   logs: LogEntry[];
+  dumps?: Dump[];
+  measures?: Measure[];
+  octane?: Octane | null;
   exception: { class: string; message: string; file: string; trace: string } | null;
   n_plus_one?: NPlusOne[];
 }

@@ -19,7 +19,15 @@ final class Collector
     /** @var array<int, array<string, mixed>> */
     private array $logs = [];
 
+    /** @var array<int, array<string, mixed>> */
+    private array $dumps = [];
+
+    /** @var array<int, array<string, mixed>> */
+    private array $measures = [];
+
     private ?array $exception = null;
+
+    private ?array $octane = null;
 
     private string $traceId = '';
 
@@ -66,10 +74,36 @@ final class Collector
         $this->logs[] = $log;
     }
 
+    /** @param array<string,mixed> $dump */
+    public function addDump(array $dump): void
+    {
+        $this->dumps[] = $dump;
+    }
+
+    /** @param array<string,mixed> $measure */
+    public function addMeasure(array $measure): void
+    {
+        $this->measures[] = $measure;
+    }
+
+    private int $groupSeq = 0;
+
+    /** A fresh id tying the spans of one concurrently() batch together. */
+    public function nextGroup(): string
+    {
+        return 'g' . (++$this->groupSeq);
+    }
+
     /** @param array<string,mixed> $e */
     public function setException(array $e): void
     {
         $this->exception = $e;
+    }
+
+    /** @param array<string,mixed> $octane */
+    public function setOctane(array $octane): void
+    {
+        $this->octane = $octane;
     }
 
     /**
@@ -85,7 +119,10 @@ final class Collector
             'request' => $request,
             'queries' => $this->queries,
             'logs' => $this->logs,
+            'dumps' => $this->dumps,
+            'measures' => $this->measures,
             'exception' => $this->exception,
+            'octane' => $this->octane,
         ];
 
         // Enforce the budget: drop oldest logs first, then fall back to oldest

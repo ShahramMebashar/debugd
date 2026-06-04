@@ -5,7 +5,9 @@ import { formatSql } from "@/lib/sqlFormat";
 import { methodColor, statusColor } from "@/lib/ui";
 import { SqlText } from "@/components/SqlText";
 import { Lightbulb } from "lucide-react";
-import type { Envelope, LogEntry, NPlusOne, Query } from "@/types";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { segmentMeasures } from "@/lib/measures";
+import type { Dump, Envelope, LogEntry, Measure, NPlusOne, Octane, Query } from "@/types";
 
 const ms = (n: number) => `${n.toFixed(1)}ms`;
 
@@ -34,15 +36,119 @@ export function TraceDetail({ id }: { id: string }) {
         <NPlusOnePanel groups={trace.n_plus_one} />
       )}
 
-      <Section title="Queries" count={trace.queries.length} accent={`${ms(dbMs)} total`}>
-        <QueryList queries={trace.queries} total={total} npIndices={npIndices} />
-      </Section>
+      <DetailTabs trace={trace} total={total} npIndices={npIndices} />
+    </div>
+  );
+}
 
-      {trace.logs.length > 0 && (
-        <Section title="Logs" count={trace.logs.length}>
-          <LogList logs={trace.logs} />
-        </Section>
+function DetailTabs({ trace, total, npIndices }: {
+  trace: Envelope; total: number; npIndices: Set<number>;
+}) {
+  const tabs: { key: string; label: string; count?: number; node: React.ReactNode }[] = [
+    {
+      key: "queries", label: "Queries", count: trace.queries.length,
+      node: <QueryList queries={trace.queries} total={total} npIndices={npIndices} />,
+    },
+  ];
+  if (trace.measures?.length) {
+    tabs.push({ key: "benchmarks", label: "Benchmarks", count: trace.measures.length, node: <MeasureList measures={trace.measures} /> });
+  }
+  if (trace.dumps?.length) {
+    tabs.push({ key: "dumps", label: "Dumps", count: trace.dumps.length, node: <DumpList dumps={trace.dumps} /> });
+  }
+  if (trace.logs.length) {
+    tabs.push({ key: "logs", label: "Logs", count: trace.logs.length, node: <LogList logs={trace.logs} /> });
+  }
+  if (trace.octane) {
+    tabs.push({ key: "octane", label: "Octane", node: <OctanePanel o={trace.octane} memoryMb={trace.request.memory_mb} /> });
+  }
+
+  return (
+    <Tabs defaultValue="queries">
+      <TabsList className="h-9">
+        {tabs.map((t) => (
+          <TabsTrigger key={t.key} value={t.key} className="text-xs">
+            {t.label}
+            {t.count !== undefined && (
+              <span className="tnum ml-1.5 rounded bg-muted px-1 font-mono text-[10px] text-muted-foreground">
+                {t.count}
+              </span>
+            )}
+          </TabsTrigger>
+        ))}
+      </TabsList>
+      {tabs.map((t) => (
+        <TabsContent key={t.key} value={t.key} className="mt-4">
+          {t.node}
+        </TabsContent>
+      ))}
+    </Tabs>
+  );
+}
+
+function OctanePanel({ o, memoryMb }: { o: Octane; memoryMb: number }) {
+  const warm = o.running && o.worker_requests >= 5;
+  const memLeak = warm && o.memory_growth_mb > 5;
+  const lateBindings = o.new_bindings?.length > 0;
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 divide-x divide-y divide-border rounded-lg border border-border bg-card sm:grid-cols-5 sm:divide-y-0">
+        <Stat label="Runtime" value={o.running ? "Octane" : "php-fpm"} />
+        <Stat label="Worker PID" value={String(o.worker_pid)} />
+        <Stat label="Requests" value={String(o.worker_requests)} />
+        <Stat
+          label="Mem growth"
+          value={`${o.memory_growth_mb >= 0 ? "+" : ""}${o.memory_growth_mb.toFixed(1)}`}
+          sub="MB"
+          danger={memLeak}
+        />
+        <Stat label="Bindings" value={String(o.bindings)} danger={warm && lateBindings} />
+      </div>
+      <p className="font-mono text-[11px] text-muted-foreground/70">
+        worker started at {o.worker_memory_start_mb.toFixed(1)} MB · now {memoryMb.toFixed(1)} MB
+      </p>
+
+      {memLeak && (
+        <div className="rounded-lg border border-rose-500/30 bg-rose-500/[0.06] p-3">
+          <div className="flex items-start gap-2">
+            <Lightbulb className="mt-0.5 size-3.5 shrink-0 text-amber-500" />
+            <p className="text-xs leading-relaxed text-foreground/90">
+              Memory grew <strong>{o.memory_growth_mb.toFixed(1)} MB</strong> over {o.worker_requests} requests on this
+              worker — a likely <strong>memory leak</strong>. Look for state accumulating between requests.
+            </p>
+          </div>
+          {lateBindings && <BindingSuspects keys={o.new_bindings} />}
+        </div>
       )}
+
+      {!memLeak && warm && lateBindings && (
+        <div className="rounded-lg border border-amber-500/30 bg-amber-500/[0.06] p-3">
+          <p className="text-xs leading-relaxed text-foreground/90">
+            This request registered container bindings <em>after</em> the worker warmed up. Under Octane these persist
+            across requests — fine if intentional, a leak if it happens every request.
+          </p>
+          <BindingSuspects keys={o.new_bindings} />
+        </div>
+      )}
+
+      {!o.running && (
+        <p className="text-xs text-muted-foreground/60">
+          Not running under Octane — per-worker metrics are trivial (one request per process).
+        </p>
+      )}
+    </div>
+  );
+}
+
+function BindingSuspects({ keys }: { keys: string[] }) {
+  return (
+    <div className="mt-2 flex flex-wrap gap-1">
+      {keys.map((k) => (
+        <code key={k} className="rounded bg-background/60 px-1.5 py-0.5 font-mono text-[11px] text-foreground/80">
+          {k}
+        </code>
+      ))}
     </div>
   );
 }
@@ -165,6 +271,87 @@ function QueryRow({
           </dl>
         </div>
       )}
+    </div>
+  );
+}
+
+function MeasureList({ measures }: { measures: Measure[] }) {
+  return (
+    <div className="space-y-2">
+      {segmentMeasures(measures).map((seg, i) =>
+        seg.group ? <ConcurrentCluster key={i} items={seg.items} /> : <BenchRow key={i} m={seg.items[0]} />,
+      )}
+    </div>
+  );
+}
+
+function BenchRow({ m }: { m: Measure }) {
+  return (
+    <div className="flex items-center gap-3 rounded-lg border border-border bg-card px-3 py-2 text-xs">
+      <span className="tnum w-16 shrink-0 text-right font-mono font-medium text-violet-600 dark:text-violet-300">
+        {m.duration_ms.toFixed(2)}ms
+      </span>
+      <span className="min-w-0 flex-1 truncate font-medium">{m.label}</span>
+      <span className="tnum shrink-0 font-mono text-[11px] text-muted-foreground/60">@{ms(m.offset_ms)}</span>
+      <span className="hidden shrink-0 truncate font-mono text-[11px] text-muted-foreground/60 sm:block" style={{ maxWidth: "30%" }}>
+        {m.caller}
+      </span>
+    </div>
+  );
+}
+
+function ConcurrentCluster({ items }: { items: Measure[] }) {
+  const parallel = items.some((m) => m.concurrent);
+  const max = Math.max(...items.map((m) => m.duration_ms), 0.001);
+  // Parallel: wall time = slowest task; sequential: sum of tasks.
+  const wall = parallel ? max : items.reduce((s, m) => s + m.duration_ms, 0);
+
+  return (
+    <div className="overflow-hidden rounded-lg border border-violet-500/30 bg-violet-500/[0.05]">
+      <div className="flex items-center gap-2 border-b border-violet-500/20 px-3 py-1.5 text-[11px]">
+        <span className="font-medium text-violet-600 dark:text-violet-300">concurrently</span>
+        <span className="rounded bg-muted px-1.5 text-[10px] uppercase tracking-wide text-muted-foreground">
+          {parallel ? "parallel" : "ran sequentially"}
+        </span>
+        <span className="text-muted-foreground/60">{items.length} tasks</span>
+        <span className="tnum ml-auto font-mono text-muted-foreground">{wall.toFixed(2)}ms wall</span>
+      </div>
+      <div className="space-y-1 p-2">
+        {items.map((m, i) => (
+          <div key={i} className="flex items-center gap-2 text-xs">
+            <span className="w-28 shrink-0 truncate font-medium">{m.label}</span>
+            <div className="relative h-2 flex-1 overflow-hidden rounded-full bg-violet-500/10">
+              <div
+                className="absolute h-2 rounded-full bg-violet-500/70"
+                style={{ left: 0, width: `${Math.max((m.duration_ms / max) * 100, 2)}%` }}
+              />
+            </div>
+            <span className="tnum w-16 shrink-0 text-right font-mono text-muted-foreground">{m.duration_ms.toFixed(2)}ms</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function DumpList({ dumps }: { dumps: Dump[] }) {
+  return (
+    <div className="space-y-2">
+      {dumps.map((d, i) => (
+        <div key={i} className="overflow-hidden rounded-lg border border-border bg-card">
+          <div className="flex items-center gap-2 border-b border-border/60 px-3 py-1.5 text-[11px]">
+            {d.label && <span className="font-medium">{d.label}</span>}
+            <span className="rounded bg-muted px-1.5 font-mono text-muted-foreground">{d.type}</span>
+            <span className="tnum ml-auto font-mono text-muted-foreground/60">@{ms(d.offset_ms)}</span>
+            <span className="hidden truncate font-mono text-muted-foreground/60 sm:block" style={{ maxWidth: "35%" }}>
+              {d.caller}
+            </span>
+          </div>
+          <pre className="max-h-72 overflow-auto whitespace-pre-wrap break-words px-3 py-2 font-mono text-xs text-foreground/85">
+            {d.value}
+          </pre>
+        </div>
+      ))}
     </div>
   );
 }

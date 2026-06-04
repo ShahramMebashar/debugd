@@ -27,12 +27,35 @@ else
 fi
 archive="debugd_${os}_${arch}.tar.gz"
 url="$base/$archive"
+checksums_url="$base/checksums.txt"
 
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
 
 echo "debugd: downloading $url"
 curl -fsSL "$url" -o "$tmp/$archive"
+curl -fsSL "$checksums_url" -o "$tmp/checksums.txt"
+
+expected="$(awk -v file="$archive" '$2 == file { print $1 }' "$tmp/checksums.txt")"
+if [ -z "$expected" ]; then
+  echo "debugd: checksum not found for $archive" >&2
+  exit 1
+fi
+
+if command -v sha256sum >/dev/null 2>&1; then
+  actual="$(sha256sum "$tmp/$archive" | awk '{ print $1 }')"
+elif command -v shasum >/dev/null 2>&1; then
+  actual="$(shasum -a 256 "$tmp/$archive" | awk '{ print $1 }')"
+else
+  echo "debugd: need sha256sum or shasum to verify download" >&2
+  exit 1
+fi
+
+if [ "$actual" != "$expected" ]; then
+  echo "debugd: checksum mismatch for $archive" >&2
+  exit 1
+fi
+
 tar -xzf "$tmp/$archive" -C "$tmp"
 
 if [ -w "$BINDIR" ]; then

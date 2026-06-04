@@ -16,7 +16,8 @@
     "opis/json-schema": "^2.6"
   },
   "autoload": {
-    "psr-4": { "Debugd\\": "src/" }
+    "psr-4": { "Debugd\\": "src/" },
+    "files": ["src/helpers.php"]
   },
   "autoload-dev": {
     "psr-4": { "Debugd\\Tests\\": "tests/" }

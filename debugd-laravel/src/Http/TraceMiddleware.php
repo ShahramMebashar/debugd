@@ -8,6 +8,7 @@ use Closure;
 use Debugd\Collector;
 use Debugd\Contracts\Sender;
 use Debugd\Timing;
+use Debugd\WorkerState;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Uid\UuidV7;
@@ -23,6 +24,7 @@ final class TraceMiddleware
         private readonly Collector $collector,
         private readonly Sender $sender,
         private readonly Timing $timing,
+        private readonly WorkerState $worker,
     ) {}
 
     public function handle(Request $request, Closure $next): Response
@@ -37,6 +39,21 @@ final class TraceMiddleware
 
     public function terminate(Request $request, Response $response): void
     {
+        $memoryMb = round(memory_get_peak_usage(true) / 1048576, 1);
+        $bindingKeys = array_keys(app()->getBindings());
+        $newBindings = $this->worker->recordBindings($bindingKeys);
+
+        $this->collector->setOctane([
+            'running' => class_exists(\Laravel\Octane\Octane::class),
+            'worker_pid' => $this->worker->pid,
+            'worker_requests' => $this->worker->requests + 1, // includes this one
+            'worker_memory_start_mb' => $this->worker->baselineMemoryMb ?? $memoryMb,
+            'memory_growth_mb' => $this->worker->growthMb($memoryMb),
+            'bindings' => count($bindingKeys),
+            'new_bindings' => array_slice($newBindings, 0, 15),
+        ]);
+        $this->worker->record($memoryMb);
+
         $envelope = $this->collector->toEnvelope(
             $this->collector->traceId(),
             (string) config('app.name', 'app'),
@@ -47,7 +64,7 @@ final class TraceMiddleware
                 'status' => $response->getStatusCode(),
                 'duration_ms' => $this->collector->offsetMs(), // total: request start → now
                 'boot_ms' => $this->timing->bootMs(),
-                'memory_mb' => round(memory_get_peak_usage(true) / 1048576, 1),
+                'memory_mb' => $memoryMb,
                 'started_at' => now()->toIso8601String(),
             ],
         );

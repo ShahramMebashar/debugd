@@ -1,8 +1,8 @@
 version: 2
 
-# Run `make ui` before `goreleaser release` so web/dist is embedded.
 before:
   hooks:
+    - sh -c "cd web && npm ci && npm run build"
     - go mod tidy
 
 builds:
@@ -15,7 +15,10 @@ builds:
     goarch: [amd64, arm64]
 
 archives:
-  - formats: [tar.gz]
+  - id: debugd
+    ids: [debugd]
+    name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
+    formats: [tar.gz]
     format_overrides:
       - goos: windows
         formats: [zip]
@@ -25,3 +28,5 @@ checksum:
 
 release:
   draft: false
+  extra_files:
+    - glob: ./install.sh

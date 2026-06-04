@@ -50,6 +50,47 @@
         }
       }
     },
+    "dumps": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["value", "caller", "offset_ms"],
+        "properties": {
+          "label": { "type": ["string", "null"] },
+          "type": { "type": "string" },
+          "value": { "type": "string" },
+          "caller": { "type": "string" },
+          "offset_ms": { "type": "number" }
+        }
+      }
+    },
+    "measures": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["label", "duration_ms", "offset_ms"],
+        "properties": {
+          "label": { "type": "string" },
+          "duration_ms": { "type": "number" },
+          "caller": { "type": "string" },
+          "offset_ms": { "type": "number" },
+          "concurrent": { "type": "boolean" },
+          "group": { "type": "string" }
+        }
+      }
+    },
+    "octane": {
+      "type": ["object", "null"],
+      "properties": {
+        "running": { "type": "boolean" },
+        "worker_pid": { "type": "integer" },
+        "worker_requests": { "type": "integer" },
+        "worker_memory_start_mb": { "type": "number" },
+        "memory_growth_mb": { "type": "number" },
+        "bindings": { "type": "integer" },
+        "new_bindings": { "type": "array", "items": { "type": "string" } }
+      }
+    },
     "exception": {
       "type": ["object", "null"],
       "properties": {

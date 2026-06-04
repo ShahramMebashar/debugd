@@ -2,37 +2,107 @@ name: ci
 
 on:
   push:
+    branches: [main]
   pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  GO_VERSION: "1.25.11"
 
 jobs:
   go:
+    name: Go quality and tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
-        with: { go-version: "1.25" }
-      # web/dist must exist for embed.FS to compile.
-      - run: mkdir -p web/dist && touch web/dist/index.html
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - name: Check module files
+        run: |
+          go mod tidy
+          git diff --exit-code -- go.mod go.sum
+      - name: Check formatting
+        run: |
+          files=$(gofmt -l $(find . -name '*.go' -not -path './web/dist/*'))
+          if [ -n "$files" ]; then
+            echo "$files"
+            exit 1
+          fi
+      - name: Prepare embedded UI stub
+        run: |
+          mkdir -p web/dist
+          printf '<!doctype html>\n' > web/dist/index.html
       - run: go vet ./...
       - run: go test -race ./...
 
   ui:
+    name: UI quality and tests
     runs-on: ubuntu-latest
-    defaults: { run: { working-directory: web } }
+    defaults:
+      run:
+        working-directory: web
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with: { node-version: "22", cache: "npm", cache-dependency-path: web/package-lock.json }
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
       - run: npm ci
       - run: npm run lint
+      - run: npm test
       - run: npm run build
 
   php:
+    name: Laravel package tests (PHP ${{ matrix.php }})
     runs-on: ubuntu-latest
-    defaults: { run: { working-directory: debugd-laravel } }
+    defaults:
+      run:
+        working-directory: debugd-laravel
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ["8.2", "8.3", "8.4"]
     steps:
       - uses: actions/checkout@v4
       - uses: shivammathur/setup-php@v2
-        with: { php-version: "8.3" }
-      - run: composer install --prefer-dist --no-interaction
+        with:
+          php-version: ${{ matrix.php }}
+          coverage: none
+          tools: composer:v2
+      - run: composer validate --no-check-lock --strict
+      - run: composer install --prefer-dist --no-interaction --no-progress
       - run: vendor/bin/pest
+
+  build:
+    name: Build single binary
+    runs-on: ubuntu-latest
+    needs: [go, ui, php]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+        working-directory: web
+      - run: npm run build
+        working-directory: web
+      - run: go build -ldflags "-s -w" -o bin/debugd ./cmd/debugd
+      - uses: actions/upload-artifact@v4
+        with:
+          name: debugd-linux-amd64
+          path: bin/debugd
+          if-no-files-found: error
