@@ -101,7 +101,7 @@ jobs:
       - run: npm run build
         working-directory: web
       - run: go build -ldflags "-s -w" -o bin/debugd ./cmd/debugd
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: debugd-linux-amd64
           path: bin/debugd
