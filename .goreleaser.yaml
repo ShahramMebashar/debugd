@@ -1,0 +1,27 @@
+version: 2
+
+# Run `make ui` before `goreleaser release` so web/dist is embedded.
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: debugd
+    main: ./cmd/debugd
+    binary: debugd
+    env: [CGO_ENABLED=0]
+    ldflags: ["-s -w -X main.version={{.Version}}"]
+    goos: [linux, darwin, windows]
+    goarch: [amd64, arm64]
+
+archives:
+  - formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+
+checksum:
+  name_template: checksums.txt
+
+release:
+  draft: false

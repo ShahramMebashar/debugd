@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://debugd.dev/schema/trace.schema.json",
+  "title": "debugd trace envelope v1",
+  "type": "object",
+  "required": ["v", "trace_id", "app", "request", "queries", "logs"],
+  "properties": {
+    "v": { "const": 1 },
+    "trace_id": { "type": "string" },
+    "app": { "type": "string" },
+    "request": {
+      "type": "object",
+      "required": ["method", "path", "status", "duration_ms"],
+      "properties": {
+        "method": { "type": "string" },
+        "path": { "type": "string" },
+        "route": { "type": "string" },
+        "status": { "type": "integer" },
+        "duration_ms": { "type": "number" },
+        "boot_ms": { "type": "number" },
+        "memory_mb": { "type": "number" },
+        "started_at": { "type": "string" }
+      }
+    },
+    "queries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["sql", "bindings_count", "duration_ms", "connection", "caller", "offset_ms"],
+        "properties": {
+          "sql": { "type": "string" },
+          "bindings_count": { "type": "integer" },
+          "duration_ms": { "type": "number" },
+          "connection": { "type": "string" },
+          "caller": { "type": "string" },
+          "offset_ms": { "type": "number" }
+        }
+      }
+    },
+    "logs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["level", "message", "offset_ms"],
+        "properties": {
+          "level": { "type": "string" },
+          "message": { "type": "string" },
+          "context": { "type": "object" },
+          "offset_ms": { "type": "number" }
+        }
+      }
+    },
+    "exception": {
+      "type": ["object", "null"],
+      "properties": {
+        "class": { "type": "string" },
+        "message": { "type": "string" },
+        "file": { "type": "string" },
+        "trace": { "type": "string" }
+      }
+    }
+  }
+}
