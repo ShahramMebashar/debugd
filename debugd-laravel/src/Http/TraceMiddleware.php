@@ -39,6 +39,14 @@ final class TraceMiddleware
 
     public function terminate(Request $request, Response $response): void
     {
+        if (filter_var(getenv('DEBUGD_DEBUG') ?: ($_SERVER['DEBUGD_DEBUG'] ?? false), FILTER_VALIDATE_BOOL)) {
+            error_log(sprintf(
+                '[debugd] terminate() reached: %s %s -> %d (queries=%d logs=%d)',
+                $request->getMethod(), $request->path(), $response->getStatusCode(),
+                $this->collector->queryCount(), $this->collector->logCount(),
+            ));
+        }
+
         $memoryMb = round(memory_get_peak_usage(true) / 1048576, 1);
         $bindingKeys = array_keys(app()->getBindings());
         $newBindings = $this->worker->recordBindings($bindingKeys);

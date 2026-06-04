@@ -25,7 +25,7 @@ export interface Query {
 export interface LogEntry {
   level: string;
   message: string;
-  context: Record<string, unknown>;
+  context: unknown; // arbitrary user data — object, array, or scalar
   offset_ms: number;
 }
 

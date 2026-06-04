@@ -44,10 +44,13 @@ type Query struct {
 }
 
 type Log struct {
-	Level    string         `json:"level"`
-	Message  string         `json:"message"`
-	Context  map[string]any `json:"context"`
-	OffsetMs float64        `json:"offset_ms"`
+	Level   string `json:"level"`
+	Message string `json:"message"`
+	// Context is arbitrary user data (e.g. request()->all()). It must stay `any`,
+	// not map[string]any: PHP encodes an empty array as `[]` (a JSON array), and
+	// unmarshaling that into a map errors — which would reject the whole trace.
+	Context  any     `json:"context"`
+	OffsetMs float64 `json:"offset_ms"`
 }
 
 // Octane carries worker-level signals (Octane only; ~inert under php-fpm).

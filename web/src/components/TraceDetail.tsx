@@ -7,6 +7,7 @@ import { SqlText } from "@/components/SqlText";
 import { Lightbulb } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { segmentMeasures } from "@/lib/measures";
+import { hasContext, prettyJson } from "@/lib/logs";
 import type { Dump, Envelope, LogEntry, Measure, NPlusOne, Octane, Query } from "@/types";
 
 const ms = (n: number) => `${n.toFixed(1)}ms`;
@@ -359,14 +360,37 @@ function DumpList({ dumps }: { dumps: Dump[] }) {
 function LogList({ logs }: { logs: LogEntry[] }) {
   const sorted = [...logs].sort((a, b) => a.offset_ms - b.offset_ms);
   return (
-    <div className="overflow-hidden rounded-lg border border-border bg-card font-mono text-xs">
+    <div className="overflow-hidden rounded-lg border border-border bg-card text-xs">
       {sorted.map((l, i) => (
-        <div key={i} className="flex gap-3 border-b border-border/60 px-3 py-1.5 last:border-0">
-          <span className="tnum w-14 shrink-0 text-right text-muted-foreground/60">{ms(l.offset_ms)}</span>
-          <span className={`w-16 shrink-0 uppercase ${levelColor(l.level)}`}>{l.level}</span>
-          <span className="min-w-0 flex-1 break-words text-foreground/85">{l.message}</span>
-        </div>
+        <LogRow key={i} l={l} />
       ))}
+    </div>
+  );
+}
+
+function LogRow({ l }: { l: LogEntry }) {
+  const [open, setOpen] = useState(false);
+  const hasCtx = hasContext(l.context);
+  return (
+    <div className="border-b border-border/60 last:border-0">
+      <button
+        onClick={() => hasCtx && setOpen((o) => !o)}
+        className={`flex w-full items-baseline gap-3 px-3 py-1.5 text-left font-mono ${hasCtx ? "hover:bg-accent/40" : "cursor-default"}`}
+      >
+        <span className="tnum w-14 shrink-0 text-right text-muted-foreground/60">{ms(l.offset_ms)}</span>
+        <span className={`w-16 shrink-0 uppercase ${levelColor(l.level)}`}>{l.level}</span>
+        <span className="min-w-0 flex-1 break-words text-foreground/85">{l.message}</span>
+        {hasCtx && (
+          <span className="shrink-0 text-muted-foreground/40 transition-transform" style={{ transform: open ? "rotate(90deg)" : "" }}>
+            ›
+          </span>
+        )}
+      </button>
+      {open && hasCtx && (
+        <pre className="max-h-72 overflow-auto whitespace-pre-wrap break-words bg-background/50 px-3 py-2 pl-[4.75rem] font-mono text-[11px] text-foreground/80">
+          {prettyJson(l.context)}
+        </pre>
+      )}
     </div>
   );
 }

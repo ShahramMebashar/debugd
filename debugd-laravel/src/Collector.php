@@ -76,6 +76,16 @@ final class Collector
         $this->queries[] = $q;
     }
 
+    public function queryCount(): int
+    {
+        return count($this->queries);
+    }
+
+    public function logCount(): int
+    {
+        return count($this->logs);
+    }
+
     /** @param array<string,mixed> $log */
     public function addLog(array $log): void
     {

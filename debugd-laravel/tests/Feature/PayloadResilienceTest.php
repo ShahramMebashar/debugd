@@ -44,3 +44,17 @@ it('keeps the payload under cap even with invalid UTF-8 in context', function ()
     $body = json_encode($env, Collector::JSON_FLAGS);
     expect(strlen((string) $body))->toBeLessThanOrEqual(512 * 1024);
 });
+
+// Root cause of "the whole trace vanished": the old encoder (no PARTIAL flag)
+// returned false on a single un-encodable value (resource / circular ref) and
+// the Sender then dropped the entire payload. The wire flags must never fail.
+it('encodes pathological captured values instead of returning false', function () {
+    $circular = [];
+    $circular['self'] = &$circular;
+
+    expect(json_encode(['ctx' => $circular], Collector::JSON_FLAGS))->not->toBeFalse();
+
+    $resource = fopen('php://memory', 'r');
+    expect(json_encode(['ctx' => ['handle' => $resource]], Collector::JSON_FLAGS))->not->toBeFalse();
+    fclose($resource);
+});

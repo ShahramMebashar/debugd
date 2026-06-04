@@ -29,6 +29,7 @@ final class Sender implements SenderContract
     /** @param array<string,mixed> $envelope */
     public function send(array $envelope): void
     {
+        $debug = filter_var(getenv('DEBUGD_DEBUG') ?: ($_SERVER['DEBUGD_DEBUG'] ?? false), FILTER_VALIDATE_BOOL);
         try {
             // Same flags as the size cap (Collector::JSON_FLAGS), so what we
             // measured is what we send. SUBSTITUTE/PARTIAL tolerate arbitrary
@@ -39,14 +40,18 @@ final class Sender implements SenderContract
                 $body = json_encode($this->minimal($envelope), Collector::JSON_FLAGS);
             }
             if ($body === false) {
+                $debug && error_log('[debugd] encode failed entirely — nothing sent');
                 return;
             }
-            $this->client->post('ingest', [
+            $debug && error_log(sprintf('[debugd] POST %s/ingest (%d bytes, trace=%s)', $this->host, strlen($body), $envelope['trace_id'] ?? '?'));
+            $response = $this->client->post('ingest', [
                 'headers' => ['Content-Type' => 'application/x-ndjson'],
                 'body' => $body . "\n",
             ]);
-        } catch (\Throwable) {
+            $debug && error_log(sprintf('[debugd] server responded %d', $response->getStatusCode()));
+        } catch (\Throwable $e) {
             // Silent by design — never surface tracing failures to the app.
+            $debug && error_log('[debugd] send failed: ' . $e->getMessage());
         }
     }
 
