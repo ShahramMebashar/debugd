@@ -46,6 +46,13 @@ One JSON object per HTTP request, POSTed to `/ingest` as NDJSON (one object per 
 | `exception` | `null` when none. |
 | `n_plus_one` | **Server-derived**, never sent by the client. |
 
+## Log reader (separate from this wire protocol)
+
+debugd can also tail the app's Laravel log files directly (server-side, `--logs`/`DEBUGD_LOGS`).
+This is **not** part of the ingest contract above — the app sends nothing. The server parses
+`storage/logs/*.log` and exposes them at `GET /api/logs` (recent, newest-first) and `GET /events/logs`
+(SSE, `event: log`). `GET /api/meta` returns `{ "logs": bool, "version": string }`. See `internal/logs`.
+
 ## Server-side derivation
 
 The server normalizes each `sql`, groups by `normalized_sql + caller`, and flags

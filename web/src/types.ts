@@ -46,6 +46,25 @@ export interface NPlusOne {
   suggestion: Suggestion;
 }
 
+export interface Meta {
+  logs: boolean;
+  logs_path: string;
+  version: string;
+  addr: string;
+  buffer: number;
+  n_plus_one: number;
+}
+
+export interface LogLine {
+  id: number;
+  time: string;
+  channel: string;
+  level: string;
+  message: string;
+  detail: string;
+  source: string;
+}
+
 export interface Octane {
   running: boolean;
   worker_pid: number;

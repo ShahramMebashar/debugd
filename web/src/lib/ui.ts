@@ -15,6 +15,17 @@ export function methodColor(method: string): string {
   }
 }
 
+/** Log level → text color class. Case-insensitive (file logs are UPPERCASE,
+ *  request logs lowercase). */
+export function levelColor(level: string): string {
+  const l = level.toLowerCase();
+  if (["error", "critical", "alert", "emergency"].includes(l)) return "text-rose-600 dark:text-rose-400";
+  if (l === "warning") return "text-amber-600 dark:text-amber-400";
+  if (l === "info" || l === "notice") return "text-sky-600 dark:text-sky-400";
+  if (l === "debug") return "text-violet-600 dark:text-violet-400";
+  return "text-muted-foreground/60";
+}
+
 /** Status → dot/text color class by class (2xx/3xx/4xx/5xx). */
 export function statusColor(status: number): string {
   if (status >= 500) return "text-rose-600 dark:text-rose-400";

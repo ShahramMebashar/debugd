@@ -22,7 +22,9 @@ Laravel (debugd-laravel)  ──POST /ingest (NDJSON)──▶  Go (debugd)  ─
 | `internal/ingest` | HTTP edge: decode → validate `v` → analyze → store → broadcast. |
 | `internal/analyze` | Pure N+1 detection. SQL normalize + group. No I/O, no state. |
 | `internal/store` | Mutex-guarded ring buffer (last N traces). Lookup by ID. |
-| `internal/sse` | Fan-out hub. Buffered per-client channels, drops on slow client. |
+| `internal/sse` | Generic fan-out hub `Hub[T]` (traces + logs). Buffered per-client channels, drops on slow client. |
+| `internal/logs` | Server-side Laravel log reader: parser + poll-tailer (`storage/logs/*.log`) + ring + `Manager` (runtime-repointable). Pure, stdlib-only. |
+| `internal/settings` | Auto-managed `config.json` (UI-editable log path). Never hand-edited. |
 | `cmd/debugd` | Wiring + routes + embedded UI. |
 | `web/` | Vite/React UI, built to `web/dist`, embedded via `web/embed.go`. |
 | `debugd-laravel/` | Composer package (separate repo). Collector + middleware + transport. |

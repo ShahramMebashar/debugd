@@ -18,6 +18,7 @@ your Laravel app  ──POST /ingest──▶  debugd (one binary)  ──live U
 - **Your own dumps and benchmarks** via a global `debugd()` helper (below).
 - **Octane stats** — worker PID, requests served, and a heads-up when memory keeps climbing on a worker (the classic leak).
 - Logs, exceptions with trace, dark/light theme. It's meant to be looked at all day.
+- A live **Logs** view that tails `storage/logs/*.log` directly — every channel (web, queue, scheduler, CLI), formatted, with level/channel filters and collapsible stack traces. Run debugd from your project root (or pass `--logs`) and it just appears.
 
 ## Get it running
 
@@ -72,6 +73,7 @@ Flags on the binary (or the matching env var):
 | `--addr` | `:9100` | where the server listens (`DEBUGD_ADDR`) |
 | `--n-plus-one` | `2` | how many repeats before it's an N+1 (`DEBUGD_NPLUSONE`) |
 | `--buffer` | `500` | how many recent traces to keep in memory |
+| `--logs` | auto | dir of Laravel log files to tail (`DEBUGD_LOGS`); auto-detects `./storage/logs`. Also settable live in the UI's **Settings** (gear icon), saved to `~/.config/debugd/config.json` — a flag/cwd always overrides it |
 | `--open` | off | open the browser on start |
 
 On the app side, `DEBUGD_CAPTURE_BINDINGS=true` ships raw query bindings (off by default —

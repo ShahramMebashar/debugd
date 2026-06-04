@@ -1,6 +1,7 @@
-// Package sse is a fan-out hub: clients subscribe over GET /events and receive
-// trace summaries as they are ingested. One goroutine-safe hub, buffered
-// per-client channels so a slow browser never blocks ingest.
+// Package sse is a generic fan-out hub: clients subscribe over an HTTP endpoint
+// and receive JSON events as they are produced. One goroutine-safe hub per
+// stream (traces, logs), buffered per-client channels so a slow browser never
+// blocks the producer.
 package sse
 
 import (
@@ -8,41 +9,42 @@ import (
 	"fmt"
 	"net/http"
 	"sync"
-
-	"github.com/shaho/debugd/internal/trace"
 )
 
-type Hub struct {
+// Hub fans out values of type T to all connected SSE clients. event is the
+// SSE event name written for each message (e.g. "trace", "log").
+type Hub[T any] struct {
+	event   string
 	mu      sync.Mutex
-	clients map[chan trace.Summary]struct{}
+	clients map[chan T]struct{}
 }
 
-func NewHub() *Hub {
-	return &Hub{clients: map[chan trace.Summary]struct{}{}}
+func NewHub[T any](event string) *Hub[T] {
+	return &Hub[T]{event: event, clients: map[chan T]struct{}{}}
 }
 
-// Broadcast pushes a summary to every subscriber, dropping it for any client
-// whose buffer is full (never blocks the ingest path).
-func (h *Hub) Broadcast(s trace.Summary) {
+// Broadcast pushes a value to every subscriber, dropping it for any client
+// whose buffer is full (never blocks the producer).
+func (h *Hub[T]) Broadcast(v T) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	for ch := range h.clients {
 		select {
-		case ch <- s:
+		case ch <- v:
 		default: // slow client — drop rather than block
 		}
 	}
 }
 
-func (h *Hub) add() chan trace.Summary {
-	ch := make(chan trace.Summary, 16)
+func (h *Hub[T]) add() chan T {
+	ch := make(chan T, 16)
 	h.mu.Lock()
 	h.clients[ch] = struct{}{}
 	h.mu.Unlock()
 	return ch
 }
 
-func (h *Hub) remove(ch chan trace.Summary) {
+func (h *Hub[T]) remove(ch chan T) {
 	h.mu.Lock()
 	delete(h.clients, ch)
 	h.mu.Unlock()
@@ -50,7 +52,7 @@ func (h *Hub) remove(ch chan trace.Summary) {
 }
 
 // ServeHTTP streams text/event-stream to one client until it disconnects.
-func (h *Hub) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h *Hub[T]) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	flusher, ok := w.(http.Flusher)
 	if !ok {
 		http.Error(w, "streaming unsupported", http.StatusInternalServerError)
@@ -71,11 +73,11 @@ func (h *Hub) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		select {
 		case <-r.Context().Done():
 			return
-		case s := <-ch:
-			b, _ := json.Marshal(s)
+		case v := <-ch:
+			b, _ := json.Marshal(v)
 			// A write error means the client is gone (and may not trigger
 			// context cancellation behind some proxies) — stop the stream.
-			if _, err := fmt.Fprintf(w, "event: trace\ndata: %s\n\n", b); err != nil {
+			if _, err := fmt.Fprintf(w, "event: %s\ndata: %s\n\n", h.event, b); err != nil {
 				return
 			}
 			flusher.Flush()

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useTrace } from "@/lib/useTrace";
 import { bar } from "@/lib/waterfall";
 import { formatSql } from "@/lib/sqlFormat";
-import { methodColor, statusColor } from "@/lib/ui";
+import { levelColor, statusColor } from "@/lib/ui";
 import { SqlText } from "@/components/SqlText";
 import { Lightbulb } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -94,17 +94,17 @@ function OctanePanel({ o, memoryMb }: { o: Octane; memoryMb: number }) {
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 divide-x divide-y divide-border rounded-lg border border-border bg-card sm:grid-cols-5 sm:divide-y-0">
-        <Stat label="Runtime" value={o.running ? "Octane" : "php-fpm"} />
-        <Stat label="Worker PID" value={String(o.worker_pid)} />
-        <Stat label="Requests" value={String(o.worker_requests)} />
-        <Stat
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+        <StatCard label="Runtime" value={o.running ? "Octane" : "php-fpm"} />
+        <StatCard label="Worker PID" value={String(o.worker_pid)} />
+        <StatCard label="Requests" value={String(o.worker_requests)} />
+        <StatCard
           label="Mem growth"
           value={`${o.memory_growth_mb >= 0 ? "+" : ""}${o.memory_growth_mb.toFixed(1)}`}
           sub="MB"
           danger={memLeak}
         />
-        <Stat label="Bindings" value={String(o.bindings)} danger={warm && lateBindings} />
+        <StatCard label="Bindings" value={String(o.bindings)} danger={warm && lateBindings} />
       </div>
       <p className="font-mono text-[11px] text-muted-foreground/70">
         worker started at {o.worker_memory_start_mb.toFixed(1)} MB · now {memoryMb.toFixed(1)} MB
@@ -159,31 +159,37 @@ function StatBar({ trace, dbMs }: { trace: Envelope; dbMs: number }) {
   const np = trace.n_plus_one?.length ?? 0;
   return (
     <header className="space-y-4">
-      <div className="flex items-center gap-3">
-        <span className={`font-mono text-sm font-semibold ${methodColor(r.method)}`}>{r.method}</span>
-        <span className="font-mono text-sm">{r.path}</span>
-        <span className={`tnum font-mono text-sm ${statusColor(r.status)}`}>{r.status}</span>
-        {r.route && <span className="font-mono text-xs text-muted-foreground">{r.route}</span>}
+      <div className="flex flex-wrap items-center gap-2.5">
+        <span className={`font-mono text-xs font-bold text-center uppercase tracking-wider px-1.5 py-0.5 rounded-sm ${
+          r.method === 'GET' ? 'bg-sky-500/10 text-sky-500 dark:text-sky-400' :
+          r.method === 'POST' ? 'bg-emerald-500/10 text-emerald-500 dark:text-emerald-400' :
+          r.method === 'PUT' || r.method === 'PATCH' ? 'bg-amber-500/10 text-amber-500 dark:text-amber-400' :
+          r.method === 'DELETE' ? 'bg-rose-500/10 text-rose-500 dark:text-rose-400' :
+          'bg-muted text-muted-foreground'
+        }`}>{r.method}</span>
+        <span className="font-mono text-sm font-semibold tracking-tight text-foreground/90">{r.path}</span>
+        <span className={`tnum font-mono text-xs font-semibold px-2 py-0.5 rounded-full border border-current/15 ${statusColor(r.status)}`}>{r.status}</span>
+        {r.route && <span className="font-mono text-xs text-muted-foreground/75 bg-muted/40 border border-border/50 px-2 py-0.5 rounded-md">{r.route}</span>}
       </div>
-      <div className="grid grid-cols-3 divide-x divide-y divide-border rounded-lg border border-border bg-card lg:grid-cols-6 lg:divide-y-0">
-        <Stat label="Duration" value={ms(r.duration_ms)} />
-        <Stat label="Boot" value={ms(r.boot_ms)} sub={r.duration_ms ? `${pct(r.boot_ms, r.duration_ms)}%` : undefined} />
-        <Stat label="DB time" value={ms(dbMs)} sub={`${pct(dbMs, r.duration_ms)}%`} />
-        <Stat label="Memory" value={`${r.memory_mb.toFixed(1)}`} sub="MB" />
-        <Stat label="Queries" value={String(trace.queries.length)} />
-        <Stat label="N+1 groups" value={String(np)} danger={np > 0} />
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+        <StatCard label="Duration" value={ms(r.duration_ms)} />
+        <StatCard label="Boot" value={ms(r.boot_ms)} sub={r.duration_ms ? `${pct(r.boot_ms, r.duration_ms)}%` : undefined} />
+        <StatCard label="DB time" value={ms(dbMs)} sub={`${pct(dbMs, r.duration_ms)}%`} />
+        <StatCard label="Memory" value={`${r.memory_mb.toFixed(1)}`} sub="MB" />
+        <StatCard label="Queries" value={String(trace.queries.length)} />
+        <StatCard label="N+1 groups" value={String(np)} danger={np > 0} />
       </div>
     </header>
   );
 }
 
-function Stat({ label, value, sub, danger }: { label: string; value: string; sub?: string; danger?: boolean }) {
+function StatCard({ label, value, sub, danger }: { label: string; value: string; sub?: string; danger?: boolean }) {
   return (
-    <div className="px-4 py-3">
-      <div className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground">{label}</div>
-      <div className={`tnum mt-1 font-mono text-lg ${danger ? "text-rose-400" : "text-foreground"}`}>
-        {value}
-        {sub && <span className="ml-1 text-xs text-muted-foreground">{sub}</span>}
+    <div className="rounded-lg border border-border bg-card/45 hover:bg-card/75 px-4 py-3 transition-colors duration-150">
+      <div className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">{label}</div>
+      <div className="tnum mt-1 flex items-baseline gap-1 font-mono text-lg font-medium leading-none">
+        <span className={danger ? "text-rose-500 dark:text-rose-455 font-bold" : "text-foreground"}>{value}</span>
+        {sub && <span className="text-xs text-muted-foreground/80">{sub}</span>}
       </div>
     </div>
   );
@@ -225,48 +231,48 @@ function QueryRow({
 }) {
   const { left, width } = bar(q.offset_ms, q.duration_ms, total);
   return (
-    <div className={`border-b border-border/60 last:border-0 ${isNPlus ? "border-l-2 border-l-rose-500/70" : ""}`}>
+    <div className={`border-b border-border/40 last:border-0 hover:bg-muted/10 transition-colors ${isNPlus ? "border-l-2 border-l-rose-500/70 bg-rose-500/[0.01]" : ""}`}>
       <button
         onClick={onToggle}
-        className="flex w-full flex-col gap-1.5 px-3 py-2 text-left transition-colors hover:bg-accent/40"
+        className="flex w-full flex-col gap-1.5 px-4 py-2.5 text-left transition-colors"
       >
         <div className="flex items-baseline gap-3">
-          <span className="text-muted-foreground/50 transition-transform" style={{ transform: open ? "rotate(90deg)" : "" }}>
+          <span className={`text-muted-foreground/45 transition-transform duration-100 ${open ? "rotate-90 text-timing" : ""}`}>
             ›
           </span>
           {isNPlus && (
-            <span className="rounded bg-rose-500/15 px-1.5 text-[10px] font-semibold uppercase tracking-wide text-rose-400">
+            <span className="rounded bg-rose-500/10 px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-rose-500 dark:text-rose-400">
               N+1
             </span>
           )}
-          <span className="min-w-0 flex-1 truncate text-xs">
+          <span className="min-w-0 flex-1 truncate font-mono text-xs font-semibold tracking-tight">
             <SqlText sql={q.sql} />
           </span>
-          <span className={`tnum shrink-0 font-mono text-xs ${isSlow ? "text-amber-400" : "text-muted-foreground"}`}>
+          <span className={`tnum shrink-0 font-mono text-xs font-semibold ${isSlow ? "text-amber-500 dark:text-amber-400" : "text-muted-foreground"}`}>
             {ms(q.duration_ms)}
           </span>
         </div>
-        <div className="flex items-center gap-3 pl-6">
-          <div className="relative h-1 flex-1 overflow-hidden rounded-full bg-timing-soft">
-            <div className="absolute h-1 rounded-full bg-timing" style={{ left: `${left}%`, width: `${width}%` }} />
+        <div className="flex items-center gap-4 pl-5">
+          <div className="relative h-[3px] flex-1 overflow-hidden rounded-full bg-timing-soft">
+            <div className="absolute h-full rounded-full bg-timing transition-all duration-300" style={{ left: `${left}%`, width: `${width}%` }} />
           </div>
-          <span className="shrink-0 truncate font-mono text-[11px] text-muted-foreground/70" style={{ maxWidth: "45%" }}>
+          <span className="shrink-0 truncate font-mono text-[10px] text-muted-foreground/65 hover:text-muted-foreground transition-colors" style={{ maxWidth: "45%" }}>
             {q.caller}
           </span>
         </div>
       </button>
 
       {open && (
-        <div className="space-y-3 bg-popover/60 px-3 pb-3 pl-9">
-          <div className="rounded-md border border-border bg-background/60 p-3 text-xs">
+        <div className="space-y-3 bg-popover/40 border-t border-border/20 px-4 py-3.5 pl-9 transition-all">
+          <div className="rounded-lg border border-border bg-background/50 p-3 text-xs leading-relaxed overflow-x-auto shadow-inner">
             <SqlText sql={formatSql(q.sql)} block />
           </div>
-          <dl className="grid grid-cols-2 gap-x-6 gap-y-1 font-mono text-[11px] sm:grid-cols-4">
+          <dl className="grid grid-cols-2 gap-x-6 gap-y-2 font-mono text-[11px] sm:grid-cols-4">
             <Meta k="connection" v={q.connection} />
             <Meta k="bindings" v={String(q.bindings_count)} />
             <Meta k="offset" v={ms(q.offset_ms)} />
             <Meta k="duration" v={ms(q.duration_ms)} />
-            <div className="col-span-2 sm:col-span-4">
+            <div className="col-span-2 sm:col-span-4 border-t border-border/20 pt-1.5 mt-1">
               <Meta k="caller" v={q.caller} />
             </div>
           </dl>
@@ -371,21 +377,28 @@ function LogList({ logs }: { logs: LogEntry[] }) {
 function LogRow({ l }: { l: LogEntry }) {
   const [open, setOpen] = useState(false);
   const hasCtx = hasContext(l.context);
+  const rowClass = "flex w-full items-baseline gap-3 px-3 py-1.5 text-left font-mono";
+  const inner = (
+    <>
+      <span className="tnum w-14 shrink-0 text-right text-muted-foreground/60">{ms(l.offset_ms)}</span>
+      <span className={`w-16 shrink-0 uppercase ${levelColor(l.level)}`}>{l.level}</span>
+      <span className="min-w-0 flex-1 break-words text-foreground/85">{l.message}</span>
+      {hasCtx && (
+        <span className="shrink-0 text-muted-foreground/40 transition-transform" style={{ transform: open ? "rotate(90deg)" : "" }}>
+          ›
+        </span>
+      )}
+    </>
+  );
   return (
     <div className="border-b border-border/60 last:border-0">
-      <button
-        onClick={() => hasCtx && setOpen((o) => !o)}
-        className={`flex w-full items-baseline gap-3 px-3 py-1.5 text-left font-mono ${hasCtx ? "hover:bg-accent/40" : "cursor-default"}`}
-      >
-        <span className="tnum w-14 shrink-0 text-right text-muted-foreground/60">{ms(l.offset_ms)}</span>
-        <span className={`w-16 shrink-0 uppercase ${levelColor(l.level)}`}>{l.level}</span>
-        <span className="min-w-0 flex-1 break-words text-foreground/85">{l.message}</span>
-        {hasCtx && (
-          <span className="shrink-0 text-muted-foreground/40 transition-transform" style={{ transform: open ? "rotate(90deg)" : "" }}>
-            ›
-          </span>
-        )}
-      </button>
+      {hasCtx ? (
+        <button onClick={() => setOpen((o) => !o)} aria-expanded={open} className={`${rowClass} hover:bg-accent/40`}>
+          {inner}
+        </button>
+      ) : (
+        <div className={rowClass}>{inner}</div>
+      )}
       {open && hasCtx && (
         <pre className="max-h-72 overflow-auto whitespace-pre-wrap break-words bg-background/50 px-3 py-2 pl-[4.75rem] font-mono text-[11px] text-foreground/80">
           {prettyJson(l.context)}
@@ -405,25 +418,34 @@ const KIND_LABEL: Record<string, string> = {
 function NPlusOnePanel({ groups }: { groups: NPlusOne[] }) {
   return (
     <Section title={`N+1 detected (${groups.length})`} tone="danger">
-      <div className="space-y-2">
+      <div className="space-y-3">
         {groups.map((g, i) => (
-          <div key={i} className="overflow-hidden rounded-lg border border-rose-500/30 bg-rose-500/[0.06]">
-            <div className="flex flex-wrap items-center gap-2 px-3 py-2 text-xs">
-              <span className="tnum rounded bg-rose-500/20 px-1.5 font-semibold text-rose-600 dark:text-rose-300">
+          <div key={i} className="overflow-hidden rounded-xl border border-destructive/20 bg-destructive/5 shadow-xs">
+            <div className="flex flex-wrap items-center gap-3 px-4 py-3 text-xs">
+              <span className="tnum rounded bg-destructive/10 px-2 py-0.5 font-mono text-xs font-semibold text-rose-500 dark:text-rose-455">
                 {g.count}×
               </span>
               {g.suggestion.table && (
-                <span className="font-mono font-medium">{g.suggestion.table}</span>
+                <span className="font-mono font-bold text-foreground">{g.suggestion.table}</span>
               )}
-              <span className="rounded bg-muted px-1.5 text-[10px] uppercase tracking-wide text-muted-foreground">
+              <span className="rounded-md border border-border bg-card/60 px-2 py-0.5 font-mono text-[9px] font-bold text-muted-foreground uppercase">
                 {KIND_LABEL[g.suggestion.kind] ?? "N+1"}
               </span>
-              <span className="tnum ml-auto font-mono text-muted-foreground">{ms(g.total_ms)} wasted</span>
-              <span className="w-full font-mono text-[11px] text-muted-foreground/70">{g.caller}</span>
+              <span className="tnum ml-auto font-mono text-xs font-semibold text-rose-500 dark:text-rose-455">{ms(g.total_ms)} wasted</span>
+              <div className="w-full font-mono text-[11px] text-muted-foreground/75 mt-1 border-t border-border/10 pt-1">
+                caller: <span className="text-foreground/80">{g.caller}</span>
+              </div>
             </div>
-            <div className="flex items-start gap-2 border-t border-rose-500/20 bg-background/40 px-3 py-2">
-              <Lightbulb className="mt-0.5 size-3.5 shrink-0 text-amber-500" />
-              <FixText fix={g.suggestion.fix} />
+            <div className="flex items-start gap-2.5 border-t border-destructive/10 bg-background/50 px-4 py-3">
+              <svg className="mt-0.5 size-4 shrink-0 text-amber-500/95" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .1 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5" />
+                <path d="M9 18h6" />
+                <path d="M10 22h4" />
+              </svg>
+              <div className="flex-1">
+                <div className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground/80 mb-0.5">Recommended Fix</div>
+                <FixText fix={g.suggestion.fix} />
+              </div>
             </div>
           </div>
         ))}
@@ -436,10 +458,10 @@ function NPlusOnePanel({ groups }: { groups: NPlusOne[] }) {
 function FixText({ fix }: { fix: string }) {
   const parts = fix.split(/(->with\([^)]*\))/g);
   return (
-    <p className="text-xs leading-relaxed text-foreground/90">
+    <p className="text-xs leading-relaxed text-foreground/90 font-medium">
       {parts.map((p, i) =>
         p.startsWith("->with(") ? (
-          <code key={i} className="rounded bg-emerald-500/15 px-1 font-mono text-emerald-700 dark:text-emerald-300">
+          <code key={i} className="rounded bg-emerald-500/10 border border-emerald-500/10 px-1.5 py-0.5 font-mono font-semibold text-emerald-600 dark:text-emerald-400">
             {p}
           </code>
         ) : (
@@ -452,16 +474,18 @@ function FixText({ fix }: { fix: string }) {
 
 function ExceptionPanel({ e }: { e: NonNullable<Envelope["exception"]> }) {
   return (
-    <div className="overflow-hidden rounded-lg border border-rose-500/30 bg-rose-500/[0.06]">
-      <div className="border-b border-rose-500/20 px-4 py-2 text-[10px] font-semibold uppercase tracking-widest text-rose-400">
-        Exception
+    <div className="overflow-hidden rounded-xl border border-destructive/20 bg-destructive/5 shadow-xs">
+      <div className="border-b border-destructive/15 bg-destructive/10 px-4 py-2.5 text-[10px] font-bold uppercase tracking-widest text-rose-500 dark:text-rose-400">
+        Fatal Exception Detected
       </div>
-      <div className="space-y-1 p-4">
-        <div className="font-mono text-sm text-rose-300">{e.class}</div>
-        <div className="text-sm text-foreground/90">{e.message}</div>
-        <div className="font-mono text-xs text-muted-foreground">{e.file}</div>
+      <div className="space-y-2 p-4">
+        <div className="font-mono text-sm font-semibold text-rose-500 dark:text-rose-455 leading-snug">{e.class}</div>
+        <div className="text-sm font-medium text-foreground/90">{e.message}</div>
+        <div className="font-mono text-[11px] text-muted-foreground/80 border-t border-border/10 pt-1.5 mt-2">
+          File: <span className="text-foreground/80">{e.file}</span>
+        </div>
         {e.trace && (
-          <pre className="mt-2 max-h-56 overflow-auto whitespace-pre-wrap rounded-md bg-background/60 p-3 font-mono text-[11px] leading-relaxed text-muted-foreground">
+          <pre className="mt-3 max-h-56 overflow-auto whitespace-pre-wrap rounded-lg bg-background/50 border border-border p-3 font-mono text-[11px] leading-relaxed text-muted-foreground">
             {e.trace}
           </pre>
         )}
@@ -499,12 +523,5 @@ const Centered = ({ children }: { children: React.ReactNode }) => (
 const Empty = ({ children }: { children: React.ReactNode }) => (
   <p className="rounded-lg border border-border bg-card px-3 py-4 text-center text-xs text-muted-foreground">{children}</p>
 );
-
-function levelColor(level: string): string {
-  if (["error", "critical", "alert", "emergency"].includes(level)) return "text-rose-600 dark:text-rose-400";
-  if (level === "warning") return "text-amber-600 dark:text-amber-400";
-  if (level === "info" || level === "notice") return "text-sky-600 dark:text-sky-400";
-  return "text-muted-foreground/60";
-}
 
 const pct = (n: number, of: number) => (of > 0 ? Math.round((n / of) * 100) : 0);

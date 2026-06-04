@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { mergeSeed } from "./stream";
 import type { Summary } from "../types";
 
 // useSSE is the single live-data primitive: subscribes to GET /events and
@@ -9,12 +10,17 @@ export function useSSE(max = 500) {
   const seen = useRef(new Set<string>());
 
   useEffect(() => {
+    let alive = true;
+
     // Seed with existing traces, then stream new ones.
     fetch("/api/traces")
       .then((r) => r.json())
       .then((initial: Summary[]) => {
-        initial?.forEach((t) => seen.current.add(t.trace_id));
-        setTraces(initial ?? []);
+        if (!alive) return;
+        const seed = initial ?? [];
+        seed.forEach((t) => seen.current.add(t.trace_id));
+        // Merge, don't overwrite — events may have streamed in during the fetch.
+        setTraces((prev) => mergeSeed(prev, seed, (t) => t.trace_id, max));
       })
       .catch(() => {});
 
@@ -25,7 +31,10 @@ export function useSSE(max = 500) {
       seen.current.add(s.trace_id);
       setTraces((prev) => [s, ...prev].slice(0, max));
     });
-    return () => es.close();
+    return () => {
+      alive = false;
+      es.close();
+    };
   }, [max]);
 
   return traces;

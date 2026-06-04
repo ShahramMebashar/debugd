@@ -50,72 +50,72 @@
 }
 
 :root {
-    --background: oklch(1 0 0);
-    --foreground: oklch(0.145 0 0);
-    --card: oklch(1 0 0);
-    --card-foreground: oklch(0.145 0 0);
+    --background: oklch(0.99 0.002 80); /* warm paper white */
+    --foreground: oklch(0.18 0.005 80); /* rich charcoal */
+    --card: oklch(1 0 0);               /* clean light card sheet */
+    --card-foreground: oklch(0.18 0.005 80);
     --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.145 0 0);
-    --primary: oklch(0.205 0 0);
-    --primary-foreground: oklch(0.985 0 0);
-    --secondary: oklch(0.97 0 0);
-    --secondary-foreground: oklch(0.205 0 0);
-    --muted: oklch(0.97 0 0);
-    --muted-foreground: oklch(0.556 0 0);
-    --accent: oklch(0.97 0 0);
-    --accent-foreground: oklch(0.205 0 0);
-    --destructive: oklch(0.577 0.245 27.325);
-    --border: oklch(0.922 0 0);
-    --input: oklch(0.922 0 0);
-    --ring: oklch(0.708 0 0);
+    --popover-foreground: oklch(0.18 0.005 80);
+    --primary: oklch(0.24 0.006 80);    /* graphite core select */
+    --primary-foreground: oklch(0.99 0.002 80);
+    --secondary: oklch(0.96 0.003 80);  /* light button background */
+    --secondary-foreground: oklch(0.24 0.006 80);
+    --muted: oklch(0.96 0.003 80);
+    --muted-foreground: oklch(0.52 0.008 80); /* slate metadata */
+    --accent: oklch(0.95 0.004 80);
+    --accent-foreground: oklch(0.20 0.006 80);
+    --destructive: oklch(0.60 0.18 20); /* beautiful premium burgundy warning */
+    --border: oklch(0.93 0.003 80);     /* elegant clean borders */
+    --input: oklch(0.93 0.003 80);
+    --ring: oklch(0.55 0.18 185);
     --chart-1: oklch(0.87 0 0);
     --chart-2: oklch(0.556 0 0);
     --chart-3: oklch(0.439 0 0);
     --chart-4: oklch(0.371 0 0);
     --chart-5: oklch(0.269 0 0);
-    --radius: 0.625rem;
-    --sidebar: oklch(0.985 0 0);
-    --sidebar-foreground: oklch(0.145 0 0);
-    --sidebar-primary: oklch(0.205 0 0);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.97 0 0);
-    --sidebar-accent-foreground: oklch(0.205 0 0);
-    --sidebar-border: oklch(0.922 0 0);
-    --sidebar-ring: oklch(0.708 0 0);
+    --radius: 0.5rem;                   /* sleek precise radii */
+    --sidebar: oklch(0.985 0.002 80);
+    --sidebar-foreground: oklch(0.18 0.005 80);
+    --sidebar-primary: oklch(0.24 0.006 80);
+    --sidebar-primary-foreground: oklch(0.99 0.002 80);
+    --sidebar-accent: oklch(0.95 0.004 80);
+    --sidebar-accent-foreground: oklch(0.24 0.006 80);
+    --sidebar-border: oklch(0.93 0.003 80);
+    --sidebar-ring: oklch(0.55 0.18 185);
 }
 
 .dark {
-    --background: oklch(0.145 0 0);
-    --foreground: oklch(0.985 0 0);
-    --card: oklch(0.205 0 0);
-    --card-foreground: oklch(0.985 0 0);
-    --popover: oklch(0.205 0 0);
-    --popover-foreground: oklch(0.985 0 0);
-    --primary: oklch(0.922 0 0);
-    --primary-foreground: oklch(0.205 0 0);
-    --secondary: oklch(0.269 0 0);
-    --secondary-foreground: oklch(0.985 0 0);
-    --muted: oklch(0.269 0 0);
-    --muted-foreground: oklch(0.708 0 0);
-    --accent: oklch(0.269 0 0);
-    --accent-foreground: oklch(0.985 0 0);
-    --destructive: oklch(0.704 0.191 22.216);
-    --border: oklch(1 0 0 / 10%);
-    --input: oklch(1 0 0 / 15%);
-    --ring: oklch(0.556 0 0);
+    --background: oklch(0.12 0.004 80); /* pitch charcoal background */
+    --foreground: oklch(0.94 0.002 80); /* soft crisp white */
+    --card: oklch(0.15 0.006 80);       /* direct dark surface */
+    --card-foreground: oklch(0.94 0.002 80);
+    --popover: oklch(0.16 0.006 80);
+    --popover-foreground: oklch(0.94 0.002 80);
+    --primary: oklch(0.94 0.002 80);
+    --primary-foreground: oklch(0.12 0.004 80);
+    --secondary: oklch(0.20 0.006 80);
+    --secondary-foreground: oklch(0.94 0.002 80);
+    --muted: oklch(0.18 0.006 80);
+    --muted-foreground: oklch(0.62 0.005 80);
+    --accent: oklch(0.22 0.007 80);
+    --accent-foreground: oklch(0.98 0.002 80);
+    --destructive: oklch(0.62 0.19 20);
+    --border: oklch(1 0 0 / 7%);        /* ultra-subtle borders */
+    --input: oklch(1 0 0 / 10%);
+    --ring: oklch(0.65 0.14 185);
     --chart-1: oklch(0.87 0 0);
     --chart-2: oklch(0.556 0 0);
     --chart-3: oklch(0.439 0 0);
     --chart-4: oklch(0.371 0 0);
     --chart-5: oklch(0.269 0 0);
-    --sidebar: oklch(0.205 0 0);
-    --sidebar-foreground: oklch(0.985 0 0);
-    --sidebar-primary: oklch(0.488 0.243 264.376);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.269 0 0);
-    --sidebar-accent-foreground: oklch(0.985 0 0);
-    --sidebar-border: oklch(1 0 0 / 10%);
-    --sidebar-ring: oklch(0.556 0 0);
+    --sidebar: oklch(0.15 0.006 80);
+    --sidebar-foreground: oklch(0.94 0.002 80);
+    --sidebar-primary: oklch(0.65 0.14 185);
+    --sidebar-primary-foreground: oklch(0.94 0.002 80);
+    --sidebar-accent: oklch(0.20 0.006 80);
+    --sidebar-accent-foreground: oklch(0.94 0.002 80);
+    --sidebar-border: oklch(1 0 0 / 7%);
+    --sidebar-ring: oklch(0.65 0.14 185);
 }
 
 @layer base {
@@ -137,35 +137,6 @@
   --font-mono: "Geist Mono Variable", ui-monospace, monospace;
   --color-timing: var(--timing);
   --color-timing-soft: var(--timing-soft);
-}
-
-:root {
-  --timing: oklch(0.62 0.13 232);
-  --timing-soft: oklch(0.62 0.13 232 / 18%);
-}
-
-/* Default the app to dark — devtools live in the dark. Tuned graphite palette. */
-.dark {
-  --background: oklch(0.165 0.006 256);
-  --foreground: oklch(0.93 0.004 256);
-  --card: oklch(0.197 0.007 256);
-  --card-foreground: oklch(0.93 0.004 256);
-  --popover: oklch(0.21 0.008 256);
-  --popover-foreground: oklch(0.93 0.004 256);
-  --primary: oklch(0.92 0.004 256);
-  --primary-foreground: oklch(0.2 0.008 256);
-  --secondary: oklch(0.255 0.008 256);
-  --secondary-foreground: oklch(0.92 0.004 256);
-  --muted: oklch(0.245 0.008 256);
-  --muted-foreground: oklch(0.66 0.012 256);
-  --accent: oklch(0.28 0.012 256);
-  --accent-foreground: oklch(0.96 0.004 256);
-  --destructive: oklch(0.62 0.2 18);
-  --border: oklch(1 0 0 / 9%);
-  --input: oklch(1 0 0 / 12%);
-  --ring: oklch(0.62 0.13 232);
-  --timing: oklch(0.72 0.13 226);
-  --timing-soft: oklch(0.72 0.13 226 / 16%);
 }
 
 /* Tabular, slashed-zero numerics everywhere data is shown. */

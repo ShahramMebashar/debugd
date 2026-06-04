@@ -13,7 +13,7 @@ import (
 )
 
 func TestHub_BroadcastFansOutToClient(t *testing.T) {
-	hub := NewHub()
+	hub := NewHub[trace.Summary]("trace")
 	ch := hub.add()
 	defer hub.remove(ch)
 
@@ -30,7 +30,7 @@ func TestHub_BroadcastFansOutToClient(t *testing.T) {
 }
 
 func TestHub_DropsWhenClientBufferFull(t *testing.T) {
-	hub := NewHub()
+	hub := NewHub[trace.Summary]("trace")
 	ch := hub.add()
 	defer hub.remove(ch)
 
@@ -44,7 +44,7 @@ func TestHub_DropsWhenClientBufferFull(t *testing.T) {
 }
 
 func TestHub_RemovedClientGetsNoBroadcast(t *testing.T) {
-	hub := NewHub()
+	hub := NewHub[trace.Summary]("trace")
 	ch := hub.add()
 	hub.remove(ch)
 
@@ -53,7 +53,7 @@ func TestHub_RemovedClientGetsNoBroadcast(t *testing.T) {
 }
 
 func TestHub_ServeHTTPStreamsSSEFrame(t *testing.T) {
-	hub := NewHub()
+	hub := NewHub[trace.Summary]("trace")
 	srv := httptest.NewServer(http.HandlerFunc(hub.ServeHTTP))
 	defer srv.Close()
 

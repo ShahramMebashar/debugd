@@ -22,9 +22,14 @@ import (
 	"syscall"
 	"time"
 
+	"path/filepath"
+
 	"github.com/shaho/debugd/internal/ingest"
+	"github.com/shaho/debugd/internal/logs"
+	"github.com/shaho/debugd/internal/settings"
 	"github.com/shaho/debugd/internal/sse"
 	"github.com/shaho/debugd/internal/store"
+	"github.com/shaho/debugd/internal/trace"
 	"github.com/shaho/debugd/web"
 )
 
@@ -35,6 +40,7 @@ func main() {
 	addr := flag.String("addr", envOr("DEBUGD_ADDR", ":9100"), "listen address")
 	buffer := flag.Int("buffer", 500, "ring buffer size (traces kept)")
 	nPlusOne := flag.Int("n-plus-one", envIntOr("DEBUGD_NPLUSONE", 2), "min repeated queries to flag as N+1")
+	logsFlag := flag.String("logs", envOr("DEBUGD_LOGS", ""), "Laravel log dir to tail (default: ./storage/logs if present)")
 	open := flag.Bool("open", false, "open the UI in a browser on start")
 	showVersion := flag.Bool("version", false, "print version and exit")
 	flag.Parse()
@@ -45,7 +51,41 @@ func main() {
 	}
 
 	ring := store.New(*buffer)
-	hub := sse.NewHub()
+	hub := sse.NewHub[trace.Summary]("trace")
+
+	// Cancel on SIGINT/SIGTERM, then drain in-flight requests gracefully.
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
+	// Log reader. The active source is resolved with precedence: explicit
+	// --logs/DEBUGD_LOGS, else cwd ./storage/logs (so launching from an app root
+	// auto-picks THAT app — never a stale saved path), else the UI-saved config.
+	cfgDir := configDir()
+	logsRing := logs.NewRing(2000)
+	logsHub := sse.NewHub[logs.Entry]("log")
+	logsMgr := logs.NewManager(ctx, logsRing, logsHub, 750*time.Millisecond)
+
+	initial := resolveLogsDir(*logsFlag)
+	if initial == "" {
+		if saved := settings.Load(cfgDir).LogsPath; saved != "" {
+			initial = resolveLogsDir(saved)
+		}
+	}
+	logsMgr.Start(initial)
+	if initial != "" {
+		log.Printf("debugd tailing logs in %s", initial)
+	}
+
+	meta := func() map[string]any {
+		return map[string]any{
+			"logs":       logsMgr.Path() != "",
+			"logs_path":  logsMgr.Path(),
+			"version":    version,
+			"addr":       *addr,
+			"buffer":     *buffer,
+			"n_plus_one": *nPlusOne,
+		}
+	}
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) {
@@ -64,6 +104,36 @@ func main() {
 		}
 		writeJSON(w, e)
 	})
+	mux.HandleFunc("GET /api/logs", func(w http.ResponseWriter, _ *http.Request) {
+		writeJSON(w, logsRing.Recent())
+	})
+	mux.Handle("GET /events/logs", logsHub)
+	mux.HandleFunc("GET /api/meta", func(w http.ResponseWriter, _ *http.Request) {
+		writeJSON(w, meta())
+	})
+	// Live, UI-editable settings. Local dev tool: the browser may point the
+	// server at any directory on this machine — acceptable on localhost.
+	mux.HandleFunc("POST /api/settings", func(w http.ResponseWriter, r *http.Request) {
+		var body struct {
+			LogsPath string `json:"logs_path"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			http.Error(w, "invalid json", http.StatusBadRequest)
+			return
+		}
+		dir := ""
+		if strings.TrimSpace(body.LogsPath) != "" {
+			if dir = resolveLogsDir(body.LogsPath); dir == "" {
+				http.Error(w, "path not found: "+body.LogsPath, http.StatusBadRequest)
+				return
+			}
+		}
+		logsMgr.Start(dir)
+		if err := settings.Save(cfgDir, settings.Config{LogsPath: dir}); err != nil {
+			log.Printf("debugd: could not save settings: %v", err)
+		}
+		writeJSON(w, meta())
+	})
 	mux.Handle("/", spaHandler(web.FS()))
 
 	// SSE streams are long-lived, so no WriteTimeout; ReadHeaderTimeout guards
@@ -73,10 +143,6 @@ func main() {
 		Handler:           mux,
 		ReadHeaderTimeout: 5 * time.Second,
 	}
-
-	// Cancel on SIGINT/SIGTERM, then drain in-flight requests gracefully.
-	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
-	defer stop()
 
 	go func() {
 		<-ctx.Done()
@@ -111,6 +177,38 @@ func spaHandler(root fs.FS) http.Handler {
 func writeJSON(w http.ResponseWriter, v any) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(v)
+}
+
+// resolveLogsDir turns the --logs value into a directory to tail. Empty value
+// auto-detects ./storage/logs (so running debugd from a project root just
+// works); a file path resolves to its parent dir so daily/rotated siblings are
+// caught too. Returns "" when there's nothing to tail.
+func resolveLogsDir(flagVal string) string {
+	candidate := flagVal
+	autodetect := candidate == ""
+	if autodetect {
+		candidate = filepath.Join("storage", "logs")
+	}
+	fi, err := os.Stat(candidate)
+	if err != nil {
+		if !autodetect {
+			log.Printf("debugd: --logs path %q not found, log reader disabled", flagVal)
+		}
+		return ""
+	}
+	if fi.IsDir() {
+		return candidate
+	}
+	return filepath.Dir(candidate)
+}
+
+// configDir is where UI-saved settings live (~/.config/debugd on Linux/mac).
+func configDir() string {
+	d, err := os.UserConfigDir()
+	if err != nil {
+		return "."
+	}
+	return filepath.Join(d, "debugd")
 }
 
 func envOr(k, def string) string {
