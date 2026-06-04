@@ -1,11 +1,21 @@
 import { useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+} from "@/components/ui/select";
+import { useEditor } from "@/lib/useEditor";
+import { EDITORS } from "@/lib/editor";
 import type { Meta } from "@/types";
 
 export function SettingsPanel({ meta, onChanged }: { meta: Meta | null; onChanged: (m: Meta) => void }) {
   const [path, setPath] = useState(meta?.logs_path ?? "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [editor, setEditor] = useEditor();
+  const editorName = EDITORS.find((e) => e.template === editor)?.name ?? "Custom";
 
   // Keep the field in sync if the server-side path changes underneath us.
   useEffect(() => setPath(meta?.logs_path ?? ""), [meta?.logs_path]);
@@ -75,6 +85,26 @@ export function SettingsPanel({ meta, onChanged }: { meta: Meta | null; onChange
           A <code className="font-mono">--logs</code> flag or launching debugd from a project root (which auto-detects{" "}
           <code className="font-mono">./storage/logs</code>) overrides this saved path — so the right app always wins.
         </p>
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Editor</h2>
+        <p className="text-xs leading-relaxed text-muted-foreground">
+          Where to open <code className="font-mono">file:line</code> links — query callers, N+1 culprits, dumps,
+          exception frames. Saved in this browser.
+        </p>
+        <Select value={editor} onValueChange={(v) => v && setEditor(v)}>
+          <SelectTrigger size="sm" className="w-[200px] text-xs">
+            {editorName}
+          </SelectTrigger>
+          <SelectContent>
+            {EDITORS.map((e) => (
+              <SelectItem key={e.name} value={e.template}>
+                {e.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </section>
 
       <section className="space-y-3">

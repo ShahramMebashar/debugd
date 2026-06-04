@@ -128,12 +128,13 @@ final class Collector
      * @param array<string,mixed> $request
      * @return array<string,mixed> Wire protocol v1 envelope.
      */
-    public function toEnvelope(string $traceId, string $app, array $request): array
+    public function toEnvelope(string $traceId, string $app, array $request, string $projectRoot = ''): array
     {
         $payload = [
             'v' => 1,
             'trace_id' => $traceId,
             'app' => $app,
+            'project_root' => $projectRoot,
             'request' => $request,
             'queries' => $this->queries,
             'logs' => $this->logs,

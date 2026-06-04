@@ -75,6 +75,7 @@ final class TraceMiddleware
                 'memory_mb' => $memoryMb,
                 'started_at' => now()->toIso8601String(),
             ],
+            base_path(),
         );
 
         // Never throws, never blocks meaningfully (timeouts in Sender).

@@ -36,6 +36,7 @@ One JSON object per HTTP request, POSTed to `/ingest` as NDJSON (one object per 
 | Field | Notes |
 |---|---|
 | `trace_id` | UUIDv7 — time-ordered, assigned by the middleware. |
+| `project_root` | App `base_path()`. The UI joins it with relative callers to build editor deep-links. |
 | `queries[].bindings_count` | Count only by default. Raw bindings shipped only with `DEBUGD_CAPTURE_BINDINGS=true`. |
 | `queries[].caller` | First non-vendor stack frame, `relative/path.php:line`. N+1 grouping key with `sql`. |
 | `*.offset_ms` | Milliseconds since request start — drives the UI waterfall. |

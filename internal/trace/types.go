@@ -8,16 +8,19 @@ const ProtocolVersion = 1
 
 // Envelope is one request's full trace (one JSON object per HTTP request).
 type Envelope struct {
-	V         int        `json:"v"`
-	TraceID   string     `json:"trace_id"`
-	App       string     `json:"app"`
-	Request   Request    `json:"request"`
-	Queries   []Query    `json:"queries"`
-	Logs      []Log      `json:"logs"`
-	Dumps     []Dump     `json:"dumps"`
-	Measures  []Measure  `json:"measures"`
-	Exception *Exception `json:"exception"`
-	Octane    *Octane    `json:"octane"`
+	V       int    `json:"v"`
+	TraceID string `json:"trace_id"`
+	App     string `json:"app"`
+	// ProjectRoot is the app's base_path, so the UI can turn relative callers
+	// (e.g. app/Foo.php:12) into absolute paths for editor links.
+	ProjectRoot string     `json:"project_root"`
+	Request     Request    `json:"request"`
+	Queries     []Query    `json:"queries"`
+	Logs        []Log      `json:"logs"`
+	Dumps       []Dump     `json:"dumps"`
+	Measures    []Measure  `json:"measures"`
+	Exception   *Exception `json:"exception"`
+	Octane      *Octane    `json:"octane"`
 
 	// NPlusOne is server-derived (not sent by the client), filled by analyze.
 	NPlusOne []NPlusOne `json:"n_plus_one,omitempty"`

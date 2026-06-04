@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { useTrace } from "@/lib/useTrace";
+import { useEditor } from "@/lib/useEditor";
 import { bar } from "@/lib/waterfall";
 import { formatSql } from "@/lib/sqlFormat";
 import { levelColor, statusColor } from "@/lib/ui";
 import { SqlText } from "@/components/SqlText";
+import { CodeLink, CodeLinkProvider } from "@/components/CodeLink";
 import { Lightbulb } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { segmentMeasures } from "@/lib/measures";
@@ -14,9 +16,11 @@ const ms = (n: number) => `${n.toFixed(1)}ms`;
 
 export function TraceDetail({ id }: { id: string }) {
   const state = useTrace(id);
+  const [editor] = useEditor();
 
   if (state.status === "loading") return <Centered>Loading…</Centered>;
   if (state.status === "error") return <Centered>Trace not found — it may have been evicted.</Centered>;
+
   if (state.status !== "loaded") return null;
 
   const { trace } = state;
@@ -28,17 +32,19 @@ export function TraceDetail({ id }: { id: string }) {
   const npIndices = new Set((trace.n_plus_one ?? []).flatMap((g) => g.indices));
 
   return (
-    <div className="mx-auto max-w-5xl space-y-8">
-      <StatBar trace={trace} dbMs={dbMs} />
+    <CodeLinkProvider root={trace.project_root ?? ""} template={editor}>
+      <div className="mx-auto max-w-5xl space-y-8">
+        <StatBar trace={trace} dbMs={dbMs} />
 
-      {trace.exception && <ExceptionPanel e={trace.exception} />}
+        {trace.exception && <ExceptionPanel e={trace.exception} />}
 
-      {trace.n_plus_one && trace.n_plus_one.length > 0 && (
-        <NPlusOnePanel groups={trace.n_plus_one} />
-      )}
+        {trace.n_plus_one && trace.n_plus_one.length > 0 && (
+          <NPlusOnePanel groups={trace.n_plus_one} />
+        )}
 
-      <DetailTabs trace={trace} total={total} npIndices={npIndices} />
-    </div>
+        <DetailTabs trace={trace} total={total} npIndices={npIndices} />
+      </div>
+    </CodeLinkProvider>
   );
 }
 
@@ -232,9 +238,18 @@ function QueryRow({
   const { left, width } = bar(q.offset_ms, q.duration_ms, total);
   return (
     <div className={`border-b border-border/40 last:border-0 hover:bg-muted/10 transition-colors ${isNPlus ? "border-l-2 border-l-rose-500/70 bg-rose-500/[0.01]" : ""}`}>
-      <button
+      <div
+        role="button"
+        tabIndex={0}
         onClick={onToggle}
-        className="flex w-full flex-col gap-1.5 px-4 py-2.5 text-left transition-colors"
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            onToggle();
+          }
+        }}
+        aria-expanded={open}
+        className="flex w-full cursor-pointer flex-col gap-1.5 px-4 py-2.5 text-left transition-colors"
       >
         <div className="flex items-baseline gap-3">
           <span className={`text-muted-foreground/45 transition-transform duration-100 ${open ? "rotate-90 text-timing" : ""}`}>
@@ -256,11 +271,9 @@ function QueryRow({
           <div className="relative h-[3px] flex-1 overflow-hidden rounded-full bg-timing-soft">
             <div className="absolute h-full rounded-full bg-timing transition-all duration-300" style={{ left: `${left}%`, width: `${width}%` }} />
           </div>
-          <span className="shrink-0 truncate font-mono text-[10px] text-muted-foreground/65 hover:text-muted-foreground transition-colors" style={{ maxWidth: "45%" }}>
-            {q.caller}
-          </span>
+          <CodeLink caller={q.caller} className="max-w-[45%] shrink-0 font-mono text-[10px]" />
         </div>
-      </button>
+      </div>
 
       {open && (
         <div className="space-y-3 bg-popover/40 border-t border-border/20 px-4 py-3.5 pl-9 transition-all">
@@ -273,7 +286,10 @@ function QueryRow({
             <Meta k="offset" v={ms(q.offset_ms)} />
             <Meta k="duration" v={ms(q.duration_ms)} />
             <div className="col-span-2 sm:col-span-4 border-t border-border/20 pt-1.5 mt-1">
-              <Meta k="caller" v={q.caller} />
+              <div className="flex gap-2">
+                <span className="text-muted-foreground/60">caller</span>
+                <CodeLink caller={q.caller} className="max-w-full" />
+              </div>
             </div>
           </dl>
         </div>
@@ -300,9 +316,7 @@ function BenchRow({ m }: { m: Measure }) {
       </span>
       <span className="min-w-0 flex-1 truncate font-medium">{m.label}</span>
       <span className="tnum shrink-0 font-mono text-[11px] text-muted-foreground/60">@{ms(m.offset_ms)}</span>
-      <span className="hidden shrink-0 truncate font-mono text-[11px] text-muted-foreground/60 sm:block" style={{ maxWidth: "30%" }}>
-        {m.caller}
-      </span>
+      <CodeLink caller={m.caller} className="hidden max-w-[30%] font-mono text-[11px] sm:inline-flex" />
     </div>
   );
 }
@@ -350,9 +364,7 @@ function DumpList({ dumps }: { dumps: Dump[] }) {
             {d.label && <span className="font-medium">{d.label}</span>}
             <span className="rounded bg-muted px-1.5 font-mono text-muted-foreground">{d.type}</span>
             <span className="tnum ml-auto font-mono text-muted-foreground/60">@{ms(d.offset_ms)}</span>
-            <span className="hidden truncate font-mono text-muted-foreground/60 sm:block" style={{ maxWidth: "35%" }}>
-              {d.caller}
-            </span>
+            <CodeLink caller={d.caller} className="hidden max-w-[35%] font-mono text-[11px] sm:inline-flex" />
           </div>
           <pre className="max-h-72 overflow-auto whitespace-pre-wrap break-words px-3 py-2 font-mono text-xs text-foreground/85">
             {d.value}
@@ -433,7 +445,7 @@ function NPlusOnePanel({ groups }: { groups: NPlusOne[] }) {
               </span>
               <span className="tnum ml-auto font-mono text-xs font-semibold text-rose-500 dark:text-rose-455">{ms(g.total_ms)} wasted</span>
               <div className="w-full font-mono text-[11px] text-muted-foreground/75 mt-1 border-t border-border/10 pt-1">
-                caller: <span className="text-foreground/80">{g.caller}</span>
+                caller: <CodeLink caller={g.caller} />
               </div>
             </div>
             <div className="flex items-start gap-2.5 border-t border-destructive/10 bg-background/50 px-4 py-3">
@@ -482,7 +494,7 @@ function ExceptionPanel({ e }: { e: NonNullable<Envelope["exception"]> }) {
         <div className="font-mono text-sm font-semibold text-rose-500 dark:text-rose-455 leading-snug">{e.class}</div>
         <div className="text-sm font-medium text-foreground/90">{e.message}</div>
         <div className="font-mono text-[11px] text-muted-foreground/80 border-t border-border/10 pt-1.5 mt-2">
-          File: <span className="text-foreground/80">{e.file}</span>
+          File: <CodeLink caller={e.file} />
         </div>
         {e.trace && (
           <pre className="mt-3 max-h-56 overflow-auto whitespace-pre-wrap rounded-lg bg-background/50 border border-border p-3 font-mono text-[11px] leading-relaxed text-muted-foreground">

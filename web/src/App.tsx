@@ -3,7 +3,6 @@ import { Settings, Search, Clock, Database } from "lucide-react";
 import { useSSE } from "@/lib/useSSE";
 import { useMeta } from "@/lib/useMeta";
 import { filterTraces, type TraceFilter } from "@/lib/filters";
-import { statusColor } from "@/lib/ui";
 import { TraceDetail } from "@/components/TraceDetail";
 import { LogConsole } from "@/components/LogConsole";
 import { SettingsPanel } from "@/components/SettingsPanel";
@@ -115,16 +114,23 @@ function RequestsView() {
   const visible = useMemo(() => filterTraces(traces, filter), [traces, filter]);
 
   return (
-    <div className="grid h-full grid-cols-[400px_1fr]">
-      <aside className="flex min-h-0 flex-col border-r border-border">
-        <header className="flex items-center justify-end px-4 py-2">
-          <span className="tnum font-mono text-xs text-muted-foreground/60">
-            {visible.length}/{traces.length}
+    <div className="grid h-full grid-cols-[380px_1fr]">
+      <aside className="flex min-h-0 flex-col border-r border-border bg-card/15">
+        <header className="flex h-10 shrink-0 items-center justify-between border-b border-border/30 bg-card/25 px-4 animate-fade-in">
+          <div className="flex items-center gap-1.5 select-none">
+            <span className="relative flex size-1.5">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-timing opacity-60"></span>
+              <span className="relative inline-flex size-1.5 rounded-full bg-timing"></span>
+            </span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/90">Traces Stream</span>
+          </div>
+          <span className="tnum font-mono text-[10px] font-bold bg-accent/40 text-muted-foreground/80 px-2 py-0.5 rounded-full border border-border/40 select-none">
+            {visible.length} / {traces.length}
           </span>
         </header>
         <FilterBar filter={filter} onChange={setFilter} />
         <ScrollArea className="min-h-0 flex-1">
-          <ul>
+          <ul className="divide-y divide-border/25">
             {visible.map((t) => (
               <RequestRow
                 key={t.trace_id}
@@ -134,8 +140,13 @@ function RequestsView() {
               />
             ))}
             {visible.length === 0 && (
-              <li className="px-4 py-10 text-center text-xs text-muted-foreground/60">
-                {traces.length === 0 ? "Waiting for traces…" : "No matches."}
+              <li className="px-4 py-16 text-center select-none">
+                <p className="text-xs font-semibold text-muted-foreground/72">
+                  {traces.length === 0 ? "Waiting for Laravel traces…" : "No traces matched."}
+                </p>
+                <p className="text-[11px] text-muted-foreground/45 mt-1 font-mono">
+                  {traces.length === 0 ? "Trigger a PHP request to begin." : "Try adjusting your filters."}
+                </p>
               </li>
             )}
           </ul>
@@ -145,8 +156,14 @@ function RequestsView() {
         {selected ? (
           <TraceDetail id={selected} />
         ) : (
-          <div className="flex h-full items-center justify-center text-sm text-muted-foreground/60">
-            Select a request to inspect.
+          <div className="flex h-full flex-col items-center justify-center text-center select-none gap-2">
+            <div className="size-10 rounded-xl border border-dashed border-border/60 bg-card/20 grid place-items-center mb-1 text-muted-foreground/50">
+              <Search className="size-4" />
+            </div>
+            <div className="text-xs font-semibold text-foreground/80">Telemetry Inspector</div>
+            <div className="text-[11px] text-muted-foreground/60 max-w-64 font-medium leading-relaxed">
+              Select any request trace from the left stream pane to view the interactive timeline, database queries, benchmarks, and debug dumps.
+            </div>
           </div>
         )}
       </main>
@@ -156,73 +173,117 @@ function RequestsView() {
 
 function FilterBar({ filter, onChange }: { filter: TraceFilter; onChange: (f: TraceFilter) => void }) {
   return (
-    <div className="flex items-center gap-2 border-y border-border px-3 py-2">
-      <Input
-        value={filter.path}
-        onChange={(e) => onChange({ ...filter, path: e.target.value })}
-        placeholder="filter path…"
-        className="h-8 flex-1 font-mono text-xs"
-      />
-      <Select value={filter.status} onValueChange={(v) => onChange({ ...filter, status: v ?? "" })}>
-        <SelectTrigger size="sm" className="w-[74px] font-mono text-xs">
-          {STATUS_LABEL[filter.status] ?? "All"}
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="">All</SelectItem>
-          <SelectItem value="2">2xx</SelectItem>
-          <SelectItem value="4">4xx</SelectItem>
-          <SelectItem value="5">5xx</SelectItem>
-        </SelectContent>
-      </Select>
-      <button
-        onClick={() => onChange({ ...filter, nPlusOneOnly: !filter.nPlusOneOnly })}
-        className={`h-8 rounded-md border px-2.5 font-mono text-xs transition-colors ${
-          filter.nPlusOneOnly
-            ? "border-rose-500/40 bg-rose-500/15 text-rose-400"
-            : "border-border text-muted-foreground hover:bg-accent/40"
-        }`}
-      >
-        N+1
-      </button>
+    <div className="flex flex-col gap-2 p-3 border-b border-border/30 bg-card/5">
+      <div className="flex items-center gap-2 relative">
+        <div className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground/50 pointer-events-none">
+          <Search className="size-3.5" />
+        </div>
+        <Input
+          value={filter.path}
+          onChange={(e) => onChange({ ...filter, path: e.target.value })}
+          placeholder="Filter request path…"
+          className="h-8 pl-8 flex-1 font-mono text-xs bg-background/50 focus-visible:bg-background border-border/35 rounded-lg placeholder:text-muted-foreground/42 focus-visible:ring-1 focus-visible:ring-timing transition-all"
+        />
+      </div>
+      <div className="flex items-center gap-2">
+        <div className="flex-1">
+          <Select value={filter.status} onValueChange={(v) => onChange({ ...filter, status: v ?? "" })}>
+            <SelectTrigger size="sm" className="w-full h-8 font-mono text-xs bg-background/50 border-border/35 rounded-lg text-left pl-2.5 hover:bg-background/80 transition-colors">
+              <span className="text-muted-foreground/60 mr-1 text-[10px] uppercase tracking-wider font-bold">Status:</span>
+              <span className="font-bold text-foreground">{STATUS_LABEL[filter.status] ?? "All"}</span>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">All</SelectItem>
+              <SelectItem value="2">2xx Success</SelectItem>
+              <SelectItem value="4">4xx Client Error</SelectItem>
+              <SelectItem value="5">5xx Server Error</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <button
+          onClick={() => onChange({ ...filter, nPlusOneOnly: !filter.nPlusOneOnly })}
+          className={`h-8 rounded-lg border px-3 font-mono text-xs font-bold tracking-tight transition-all flex items-center gap-1.5 cursor-pointer select-none ${
+            filter.nPlusOneOnly
+              ? "border-rose-500/30 bg-rose-500/10 text-rose-550 dark:text-rose-400 hover:bg-rose-500/15"
+              : "border-border/35 bg-background/50 text-muted-foreground/80 hover:bg-accent/40 hover:text-foreground"
+          }`}
+        >
+          <span className={`size-1.5 rounded-full ${filter.nPlusOneOnly ? "bg-rose-500 animate-pulse" : "bg-muted-foreground/40"}`} />
+          N+1
+        </button>
+      </div>
     </div>
   );
 }
 
 function RequestRow({ t, active, onClick }: { t: Summary; active: boolean; onClick: () => void }) {
+  const isError = t.status >= 500;
+  const isWarn = t.status >= 400 && t.status < 500;
+
   return (
     <li
       onClick={onClick}
-      className={`cursor-pointer border-b border-border/40 border-l-2 py-3 px-4 transition-all duration-150 ${
+      className={`cursor-pointer px-4 py-3 transition-all duration-150 group relative select-none ${
         active
-          ? "border-l-timing bg-timing-soft/20 dark:bg-timing-soft/10 text-foreground"
-          : "border-l-transparent hover:bg-accent/20 text-foreground/90"
+          ? "bg-timing-soft/12 dark:bg-timing-soft/6"
+          : "hover:bg-muted/12"
       }`}
     >
-      <div className="flex items-center gap-2.5">
-        <span className={`w-11 shrink-0 font-mono text-[9px] font-bold text-center uppercase tracking-wider px-1 py-0.5 rounded-sm ${
-          t.method === 'GET' ? 'bg-sky-500/10 text-sky-500 dark:text-sky-450' :
-          t.method === 'POST' ? 'bg-emerald-500/10 text-emerald-500 dark:text-emerald-450' :
-          t.method === 'PUT' || t.method === 'PATCH' ? 'bg-amber-500/10 text-amber-500 dark:text-amber-450' :
-          t.method === 'DELETE' ? 'bg-rose-500/10 text-rose-500 dark:text-rose-455' :
-          'bg-muted text-muted-foreground'
-        }`}>
-          {t.method}
-        </span>
-        <span className="min-w-0 flex-1 truncate font-mono text-xs font-semibold tracking-tight leading-none">
-          {t.path}
-        </span>
-        {t.n_plus_one > 0 && (
-          <span className="shrink-0 rounded bg-rose-500/10 border border-rose-500/10 px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-rose-500 dark:text-rose-400">
-            N+1
+      <div 
+        className={`absolute left-0 top-1.5 bottom-1.5 w-1 rounded-r transition-all duration-200 ${
+          active 
+            ? "bg-timing h-auto" 
+            : "bg-transparent h-0 group-hover:bg-muted-foreground/30 group-hover:h-3"
+        }`} 
+      />
+
+      <div className="flex items-center justify-between gap-2.5">
+        <div className="flex items-center gap-2 min-w-0">
+          <span className={`shrink-0 font-mono text-[9px] font-bold text-center px-1.5 py-0.5 rounded-sm ${
+            t.method === 'GET' ? 'bg-sky-500/10 text-sky-600 dark:text-sky-400' :
+            t.method === 'POST' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' :
+            t.method === 'PUT' || t.method === 'PATCH' ? 'bg-amber-500/10 text-amber-600 dark:text-amber-450' :
+            t.method === 'DELETE' ? 'bg-rose-500/10 text-rose-500 dark:text-rose-400' :
+            'bg-muted text-muted-foreground'
+          }`}>
+            {t.method}
           </span>
-        )}
+          <span className={`truncate font-mono text-xs tracking-tight ${active ? "text-foreground font-bold" : "text-foreground/85 font-semibold"}`}>
+            {t.path}
+          </span>
+        </div>
+
+        <div className="flex items-center gap-1.5 shrink-0">
+          {t.n_plus_one > 0 && (
+            <span className="rounded bg-rose-500/10 border border-rose-500/10 px-1 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-rose-500 dark:text-rose-455">
+              N+1
+            </span>
+          )}
+        </div>
       </div>
-      <div className="tnum mt-2 flex items-center gap-2 pl-[3.25rem] font-mono text-[10px] uppercase font-semibold text-muted-foreground/60 tracking-wider">
-        <span className={statusColor(t.status)}>{t.status}</span>
-        <span className="opacity-40">·</span>
-        <span>{t.duration_ms.toFixed(1)}ms</span>
-        <span className="opacity-40">·</span>
-        <span>{t.query_count} {t.query_count === 1 ? 'query' : 'queries'}</span>
+
+      <div className="tnum mt-2 flex items-center justify-between pl-0 font-mono text-[10px] uppercase font-bold text-muted-foreground/50 tracking-wider">
+        <div className="flex items-center gap-1">
+          <span className={`inline-flex items-center justify-center font-bold px-1 rounded-sm ${
+            isError ? "bg-rose-500/10 text-rose-500 dark:text-rose-400" :
+            isWarn ? "bg-amber-500/10 text-amber-500 dark:text-amber-400" :
+            "bg-emerald-500/5 text-emerald-500 dark:text-emerald-400"
+          }`}>
+            {t.status}
+          </span>
+        </div>
+
+        <div className="flex items-center gap-2.5">
+          <span className="flex items-center gap-1">
+            <Clock className="size-3 text-muted-foreground/35" />
+            <span className="text-muted-foreground/75 font-semibold">{t.duration_ms.toFixed(1)}ms</span>
+          </span>
+          <span className="opacity-35">·</span>
+          <span className="flex items-center gap-1">
+            <Database className="size-3 text-muted-foreground/35" />
+            <span className="text-muted-foreground/75 font-semibold">{t.query_count} Q</span>
+          </span>
+        </div>
       </div>
     </li>
   );

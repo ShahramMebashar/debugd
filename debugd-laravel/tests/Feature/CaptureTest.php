@@ -17,6 +17,7 @@ it('ships exactly one envelope per request through the sender', function () {
     expect($fake->sent)->toHaveCount(1);
 
     $env = $fake->sent[0];
+    expect($env['project_root'])->toBe(base_path());
     expect($env['v'])->toBe(1)
         ->and($env['request']['method'])->toBe('GET')
         ->and($env['request']['path'])->toBe('/_probe')

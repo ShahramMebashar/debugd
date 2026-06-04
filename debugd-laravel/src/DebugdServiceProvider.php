@@ -37,8 +37,10 @@ final class DebugdServiceProvider extends ServiceProvider
         ));
 
         // Scoped = fresh per request, Octane-safe. Anchored to request start.
-        $this->app->scoped(Collector::class, fn () => new Collector(
-            $this->app->make(Timing::class)->requestStart,
+        // Use the resolving container ($app), not $this->app — under Octane the
+        // request lives in a sandbox clone, and $this->app is the base app.
+        $this->app->scoped(Collector::class, fn ($app) => new Collector(
+            $app->make(Timing::class)->requestStart,
         ));
 
         // Singleton transport (the contract) — one Guzzle client reused across
@@ -82,7 +84,11 @@ final class DebugdServiceProvider extends ServiceProvider
             $handler->reportable(function (\Throwable $e): void {
                 $this->quietly(function () use ($e): void {
                     $base = base_path() . DIRECTORY_SEPARATOR;
-                    $this->app->make(Collector::class)->setException([
+                    // app() (not $this->app) so we hit the CURRENT request's
+                    // container — under Octane $this->app is the base app, but
+                    // the request (and the Collector the middleware flushes)
+                    // lives in a per-request sandbox clone.
+                    app(Collector::class)->setException([
                         'class' => $e::class,
                         'message' => $e->getMessage(),
                         'file' => str_replace($base, '', $e->getFile()) . ':' . $e->getLine(),
@@ -101,8 +107,10 @@ final class DebugdServiceProvider extends ServiceProvider
 
         DB::listen(function (QueryExecuted $q) use ($captureBindings): void {
             $this->quietly(function () use ($q, $captureBindings): void {
+                // app() resolves the current request's (sandbox) Collector —
+                // see captureExceptions(); $this->app is the base app under Octane.
                 /** @var Collector $c */
-                $c = $this->app->make(Collector::class);
+                $c = app(Collector::class);
                 $entry = [
                     'sql' => $q->sql,
                     'bindings_count' => count($q->bindings),
@@ -124,7 +132,7 @@ final class DebugdServiceProvider extends ServiceProvider
         // Append our Monolog handler so log records flow into the Collector.
         $logger = $this->app['log']->getLogger();
         if (method_exists($logger, 'pushHandler')) {
-            $logger->pushHandler(new DebugdHandler($this->app));
+            $logger->pushHandler(new DebugdHandler());
         }
     }
 

@@ -96,6 +96,7 @@ export interface Envelope {
   v: number;
   trace_id: string;
   app: string;
+  project_root: string;
   request: {
     method: string;
     path: string;

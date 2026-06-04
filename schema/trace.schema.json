@@ -8,6 +8,7 @@
     "v": { "const": 1 },
     "trace_id": { "type": "string" },
     "app": { "type": "string" },
+    "project_root": { "type": "string" },
     "request": {
       "type": "object",
       "required": ["method", "path", "status", "duration_ms"],
