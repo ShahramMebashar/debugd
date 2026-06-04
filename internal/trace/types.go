@@ -59,6 +59,7 @@ type Log struct {
 // Octane carries worker-level signals (Octane only; ~inert under php-fpm).
 type Octane struct {
 	Running             bool     `json:"running"`
+	Runtime             string   `json:"runtime"` // Octane | php-fpm | artisan serve | …
 	WorkerPID           int      `json:"worker_pid"`
 	WorkerRequests      int      `json:"worker_requests"`
 	WorkerMemoryStartMB float64  `json:"worker_memory_start_mb"`

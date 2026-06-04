@@ -21,7 +21,9 @@ it('captures boot time, peak memory and total duration on the request', function
         ->and($r['duration_ms'])->toBeGreaterThanOrEqual(0.0);
 
     $o = $fake->sent[0]['octane'];
-    expect($o)->toHaveKeys(['running', 'worker_pid', 'worker_requests', 'worker_memory_start_mb', 'memory_growth_mb', 'bindings', 'new_bindings'])
+    expect($o)->toHaveKeys(['running', 'runtime', 'worker_pid', 'worker_requests', 'worker_memory_start_mb', 'memory_growth_mb', 'bindings', 'new_bindings'])
+        ->and($o['running'])->toBeFalse() // tests run under CLI, not Octane
+        ->and($o['runtime'])->toBeString()
         ->and($o['worker_pid'])->toBeGreaterThan(0)
         ->and($o['worker_requests'])->toBeGreaterThanOrEqual(1)
         ->and($o['bindings'])->toBeGreaterThan(0)

@@ -84,6 +84,7 @@
       "type": ["object", "null"],
       "properties": {
         "running": { "type": "boolean" },
+        "runtime": { "type": "string" },
         "worker_pid": { "type": "integer" },
         "worker_requests": { "type": "integer" },
         "worker_memory_start_mb": { "type": "number" },

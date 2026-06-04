@@ -51,8 +51,20 @@ final class TraceMiddleware
         $bindingKeys = array_keys(app()->getBindings());
         $newBindings = $this->worker->recordBindings($bindingKeys);
 
+        // "running" = actually under Octane (a long-lived worker, where leak
+        // detection is meaningful) — not merely "the Octane package is installed".
+        $octane = ! empty($_SERVER['LARAVEL_OCTANE']);
+        $runtime = match (true) {
+            $octane => 'Octane',
+            PHP_SAPI === 'cli-server' => 'artisan serve',
+            PHP_SAPI === 'fpm-fcgi' => 'php-fpm',
+            str_contains(PHP_SAPI, 'frankenphp') => 'FrankenPHP',
+            default => PHP_SAPI,
+        };
+
         $this->collector->setOctane([
-            'running' => class_exists(\Laravel\Octane\Octane::class),
+            'running' => $octane,
+            'runtime' => $runtime,
             'worker_pid' => $this->worker->pid,
             'worker_requests' => $this->worker->requests + 1, // includes this one
             'worker_memory_start_mb' => $this->worker->baselineMemoryMb ?? $memoryMb,

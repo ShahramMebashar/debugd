@@ -67,6 +67,7 @@ export interface LogLine {
 
 export interface Octane {
   running: boolean;
+  runtime: string;
   worker_pid: number;
   worker_requests: number;
   worker_memory_start_mb: number;

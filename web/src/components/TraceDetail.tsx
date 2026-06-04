@@ -67,7 +67,7 @@ function DetailTabs({ trace, total, npIndices }: {
     tabs.push({ key: "logs", label: "Logs", count: trace.logs.length, node: <LogList logs={trace.logs} /> });
   }
   if (trace.octane) {
-    tabs.push({ key: "octane", label: "Octane", node: <OctanePanel o={trace.octane} memoryMb={trace.request.memory_mb} /> });
+    tabs.push({ key: "octane", label: "Web server", node: <OctanePanel o={trace.octane} memoryMb={trace.request.memory_mb} /> });
   }
 
   return (
@@ -101,7 +101,7 @@ function OctanePanel({ o, memoryMb }: { o: Octane; memoryMb: number }) {
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-        <StatCard label="Runtime" value={o.running ? "Octane" : "php-fpm"} />
+        <StatCard label="Runtime" value={o.runtime || (o.running ? "Octane" : "php-fpm")} />
         <StatCard label="Worker PID" value={String(o.worker_pid)} />
         <StatCard label="Requests" value={String(o.worker_requests)} />
         <StatCard
