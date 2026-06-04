@@ -9,6 +9,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"io/fs"
 	"log"
 	"net"
@@ -56,6 +57,20 @@ func main() {
 	// Cancel on SIGINT/SIGTERM, then drain in-flight requests gracefully.
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
+
+	// When launched as a Tauri sidecar (DEBUGD_PARENT_WATCH set), the desktop app
+	// keeps our stdin pipe open. If it exits — even on crash or force-quit — the
+	// pipe closes and we read EOF, our cue to shut down so the server never
+	// outlives the app. Gated by the env var so terminal/CI runs (where stdin may
+	// be /dev/null and return EOF immediately) are never affected.
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	if os.Getenv("DEBUGD_PARENT_WATCH") != "" {
+		go func() {
+			io.Copy(io.Discard, os.Stdin)
+			cancel()
+		}()
+	}
 
 	// Log reader. The active source is resolved with precedence: explicit
 	// --logs/DEBUGD_LOGS, else cwd ./storage/logs (so launching from an app root

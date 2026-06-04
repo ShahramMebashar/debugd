@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>dbugd</title>
+    <style>
+      :root { color-scheme: light dark; }
+      html, body {
+        height: 100%; margin: 0;
+        display: grid; place-items: center;
+        font-family: ui-sans-serif, system-ui, sans-serif;
+        background: #0b0d12; color: #cbd5e1;
+      }
+      .box { text-align: center; }
+      .dot {
+        width: 10px; height: 10px; border-radius: 50%;
+        background: #38bdf8; margin: 0 auto 14px;
+        animation: pulse 1s ease-in-out infinite;
+      }
+      @keyframes pulse { 0%,100% { opacity: .35; transform: scale(.85); } 50% { opacity: 1; transform: scale(1); } }
+      .name { font-weight: 600; letter-spacing: .02em; }
+      .sub { font-size: 12px; opacity: .6; margin-top: 4px; }
+    </style>
+  </head>
+  <body>
+    <div class="box">
+      <div class="dot"></div>
+      <div class="name">dbugd</div>
+      <div class="sub">starting trace server…</div>
+    </div>
+  </body>
+</html>

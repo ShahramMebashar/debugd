@@ -1,0 +1,28 @@
+{
+  "$schema": "../gen/schemas/remote-schema.json",
+  "identifier": "default",
+  "description": "Core, sidecar spawn, and editor-deep-link permissions. The UI is served remotely (Go server on :9100 in prod, Vite on :5173 in dev), so those origins are whitelisted for IPC.",
+  "windows": ["main"],
+  "remote": {
+    "urls": ["http://localhost:9100", "http://localhost:5173"]
+  },
+  "permissions": [
+    "core:default",
+    "opener:default",
+    {
+      "identifier": "shell:allow-spawn",
+      "allow": [{ "name": "binaries/debugd", "sidecar": true }]
+    },
+    {
+      "identifier": "opener:allow-open-url",
+      "allow": [
+        { "url": "vscode://*" },
+        { "url": "vscode-insiders://*" },
+        { "url": "cursor://*" },
+        { "url": "phpstorm://*" },
+        { "url": "windsurf://*" },
+        { "url": "subl://*" }
+      ]
+    }
+  ]
+}
