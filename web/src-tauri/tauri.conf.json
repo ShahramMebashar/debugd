@@ -6,7 +6,8 @@
   "build": {
     "devUrl": "http://localhost:5173",
     "beforeDevCommand": "npm run dev",
-    "frontendDist": "splash"
+    "beforeBuildCommand": "npm run build && ../scripts/build-sidecar.sh",
+    "frontendDist": "../dist"
   },
   "app": {
     "withGlobalTauri": true,
@@ -27,7 +28,7 @@
   },
   "bundle": {
     "active": true,
-    "targets": "all",
+    "targets": ["dmg", "app"],
     "externalBin": ["binaries/debugd"],
     "icon": [
       "icons/32x32.png",

@@ -10,9 +10,10 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 OUT_DIR="$ROOT/web/src-tauri/binaries"
 
-# Tauri matches the binary by Rust's host triple. Override TARGET_TRIPLE to
-# cross-compile (also set GOOS/GOARCH to match).
-TRIPLE="${TARGET_TRIPLE:-$(rustc --print host-tuple)}"
+# Tauri matches the binary by Rust's target triple. Override TARGET_TRIPLE to
+# cross-compile (also set GOOS/GOARCH to match). Prefer Tauri's hook-provided
+# target when available, then fall back to rustc's host triple.
+TRIPLE="${TARGET_TRIPLE:-${TAURI_ENV_TARGET_TRIPLE:-$(rustc -vV | awk '/^host: / {print $2}')}}"
 
 EXT=""
 case "$TRIPLE" in

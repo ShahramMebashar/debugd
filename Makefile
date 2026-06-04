@@ -11,13 +11,14 @@ run:
 	go run ./cmd/debugd --open
 
 # --- Desktop (Tauri) ---------------------------------------------------------
-# The Go binary embeds web/dist, and Tauri bundles the Go binary, so the order is:
-# build UI -> build sidecar (embeds UI) -> tauri build (bundles sidecar).
+# The Go binary embeds web/dist, and Tauri bundles the Go binary. The Tauri
+# beforeBuildCommand runs the same UI + sidecar chain so `npm run tauri:build`
+# and `make desktop` stay equivalent.
 sidecar: ui
 	./scripts/build-sidecar.sh
 
-desktop: sidecar
-	cd web && npm run tauri:build
+desktop:
+	cd web && npm ci && npm run tauri:build
 
 # Dev shell with HMR. Run the Go server separately: `go run ./cmd/debugd`.
 desktop-dev:
