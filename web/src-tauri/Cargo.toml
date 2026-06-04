@@ -1,6 +1,6 @@
 [package]
 name = "debugd-desktop"
-version = "0.1.0"
+version = "0.3.0"
 description = "Desktop app for debugd, a local Laravel request profiler."
 authors = ["Shahram Hassan"]
 license = "MIT"

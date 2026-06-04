@@ -70,6 +70,21 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci
         working-directory: web
+      - name: Set desktop version from tag
+        run: |
+          set -euo pipefail
+          VERSION="${GITHUB_REF_NAME#v}"
+
+          node - "$VERSION" <<'NODE'
+          const fs = require("node:fs");
+          const version = process.argv[2];
+          const configPath = "web/src-tauri/tauri.conf.json";
+          const config = JSON.parse(fs.readFileSync(configPath, "utf8"));
+          config.version = version;
+          fs.writeFileSync(configPath, `${JSON.stringify(config, null, 2)}\n`);
+          NODE
+
+          perl -0pi -e 's/^version = "[^"]+"/version = "'"$VERSION"'"/m' web/src-tauri/Cargo.toml
       - name: Write Apple notarization API key
         env:
           APPLE_API_KEY_CONTENT: ${{ secrets.APPLE_API_KEY }}
@@ -78,6 +93,16 @@ jobs:
           set -euo pipefail
           printf '%s\n' "$APPLE_API_KEY_CONTENT" > "$RUNNER_TEMP/AuthKey_${APPLE_API_KEY_ID}.p8"
           chmod 600 "$RUNNER_TEMP/AuthKey_${APPLE_API_KEY_ID}.p8"
+      - name: Validate Apple signing certificate
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+        run: |
+          set -euo pipefail
+          CERT_PATH="$RUNNER_TEMP/apple-signing-certificate.p12"
+
+          printf '%s' "$APPLE_CERTIFICATE" | base64 -D > "$CERT_PATH"
+          openssl pkcs12 -in "$CERT_PATH" -passin env:APPLE_CERTIFICATE_PASSWORD -nokeys -nodes >/dev/null
       - name: Build signed and notarized macOS desktop app
         env:
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
