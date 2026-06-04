@@ -1,12 +1,12 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "dbugd",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "identifier": "com.shaho.dbugd",
   "build": {
     "devUrl": "http://localhost:5173",
     "beforeDevCommand": "npm run dev",
-    "beforeBuildCommand": "npm run build && ../scripts/build-sidecar.sh",
+    "beforeBuildCommand": "npm run build && node ../scripts/build-sidecar.mjs",
     "frontendDist": "../dist"
   },
   "app": {

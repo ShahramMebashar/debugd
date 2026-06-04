@@ -8,18 +8,4 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-OUT_DIR="$ROOT/web/src-tauri/binaries"
-
-# Tauri matches the binary by Rust's target triple. Override TARGET_TRIPLE to
-# cross-compile (also set GOOS/GOARCH to match). Prefer Tauri's hook-provided
-# target when available, then fall back to rustc's host triple.
-TRIPLE="${TARGET_TRIPLE:-${TAURI_ENV_TARGET_TRIPLE:-$(rustc -vV | awk '/^host: / {print $2}')}}"
-
-EXT=""
-case "$TRIPLE" in
-  *windows*) EXT=".exe" ;;
-esac
-
-mkdir -p "$OUT_DIR"
-echo "building debugd sidecar -> binaries/debugd-$TRIPLE$EXT"
-( cd "$ROOT" && go build -ldflags "-s -w" -o "$OUT_DIR/debugd-$TRIPLE$EXT" ./cmd/debugd )
+exec node "$ROOT/scripts/build-sidecar.mjs"
