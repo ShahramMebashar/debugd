@@ -36,6 +36,14 @@ final class Collector
     /** Payload budget: drop oldest logs first when exceeded (plan §2.1). */
     private const MAX_BYTES = 512 * 1024;
 
+    /**
+     * Canonical JSON flags for the wire body. The cap measurement and the Sender
+     * MUST use the same flags, or the cap measures a different length than what
+     * is sent. SUBSTITUTE/PARTIAL guarantee encoding never returns false on
+     * arbitrary captured bytes (e.g. request()->all()).
+     */
+    public const JSON_FLAGS = JSON_INVALID_UTF8_SUBSTITUTE | JSON_PARTIAL_OUTPUT_ON_ERROR | JSON_UNESCAPED_UNICODE;
+
     public function __construct(?float $startedAt = null)
     {
         // Anchor to the true request start so offsets/duration include boot.
@@ -128,7 +136,12 @@ final class Collector
         // Enforce the budget: drop oldest logs first, then fall back to oldest
         // queries (an N+1 storm can blow the cap on queries alone). Re-encode
         // once per drop so the cap is actually guaranteed, not best-effort.
-        $size = strlen((string) json_encode($payload));
+        //
+        // Measure with the SAME flags the Sender uses — arbitrary bytes flow in
+        // here (e.g. request()->all()), and a plain json_encode returns false on
+        // invalid UTF-8, which would silently disable the cap and let an
+        // oversized payload get rejected by the server (the whole trace vanishes).
+        $size = $this->encodedSize($payload);
         while ($size > self::MAX_BYTES
             && ($payload['logs'] !== [] || $payload['queries'] !== [])) {
             if ($payload['logs'] !== []) {
@@ -136,9 +149,15 @@ final class Collector
             } else {
                 array_shift($payload['queries']);
             }
-            $size = strlen((string) json_encode($payload));
+            $size = $this->encodedSize($payload);
         }
 
         return $payload;
+    }
+
+    /** Byte length of the payload as the wire actually encodes it. */
+    private function encodedSize(array $payload): int
+    {
+        return strlen((string) json_encode($payload, self::JSON_FLAGS));
     }
 }

@@ -11,6 +11,7 @@ node_modules/
 # PHP
 /debugd-laravel/vendor/
 /debugd-laravel/composer.lock
+/debugd-laravel/.phpunit.cache/
 
 # Misc
 .DS_Store

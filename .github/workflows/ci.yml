@@ -80,7 +80,7 @@ jobs:
           tools: composer:v2
       - run: composer validate --no-check-lock --strict
       - run: composer install --prefer-dist --no-interaction --no-progress
-      - run: vendor/bin/pest
+      - run: vendor/bin/pest --configuration=phpunit.xml.dist
 
   build:
     name: Build single binary
