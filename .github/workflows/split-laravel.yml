@@ -37,6 +37,6 @@ jobs:
           repository_organization: 'ShahramMebashar'
           repository_name: 'debugd-laravel'
           user_name: 'Shahram Mebashar'
-          user_email: 'talavoock@gmail.com'
+          user_email: '25268287+ShahramMebashar@users.noreply.github.com'
           branch: 'main'
           tag: ${{ steps.tag.outputs.value }}
