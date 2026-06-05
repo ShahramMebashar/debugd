@@ -1,0 +1,42 @@
+name: Split debugd-laravel
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'debugd-laravel/**'
+    tags:
+      # Release the Laravel package by pushing a tag like "laravel-v0.3.1".
+      # It is published to Packagist as version "0.3.1".
+      - 'laravel-v*'
+
+jobs:
+  split:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Derive package tag from monorepo tag
+        id: tag
+        run: |
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            echo "value=${GITHUB_REF_NAME#laravel-}" >> "$GITHUB_OUTPUT"
+          else
+            echo "value=" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Split debugd-laravel -> standalone repo
+        uses: symplify/monorepo-split-github-action@v2.3.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.SPLIT_TOKEN }}
+        with:
+          package_directory: 'debugd-laravel'
+          repository_organization: 'ShahramMebashar'
+          repository_name: 'debugd-laravel'
+          user_name: 'Shahram Mebashar'
+          user_email: 'talavoock@gmail.com'
+          branch: 'main'
+          tag: ${{ steps.tag.outputs.value }}

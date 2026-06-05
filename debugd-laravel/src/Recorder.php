@@ -8,6 +8,7 @@ use Closure;
 use Debugd\Support\Caller;
 use Debugd\Support\Value;
 
+
 /**
  * The object returned by the global debugd() helper. When tracing is off the
  * Collector is null and every method is a safe no-op (bench still runs its
