@@ -1,5 +1,9 @@
 # debugd
 
+<p align="center">
+  <img src="app-screenshot.jpg" alt="debugd live UI" width="100%">
+</p>
+
 A tiny request profiler for Laravel that you actually leave running. One Go binary
 serves a live UI; a `--dev` Composer package quietly ships each request's queries,
 logs, timings, and exceptions to it. No Docker, no database, no config files — and

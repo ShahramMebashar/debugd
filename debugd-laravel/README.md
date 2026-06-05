@@ -6,6 +6,10 @@
 Zero-instrumentation request tracing for Laravel — the passive collector for the
 [**debugd**](https://github.com/ShahramMebashar/debugd) server.
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/ShahramMebashar/debugd/main/app-screenshot.jpg" alt="debugd live UI" width="100%">
+</p>
+
 It quietly ships each request's queries, logs, timings, exceptions, and your own dumps to a
 local debugd server, which serves a live UI. When `DEBUGD_HOST` is unset, the package does
 **literally nothing** — no listeners, zero overhead — so it's safe to leave installed.
