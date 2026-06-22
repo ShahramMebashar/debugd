@@ -198,23 +198,60 @@ func writeJSON(w http.ResponseWriter, v any) {
 // auto-detects ./storage/logs (so running debugd from a project root just
 // works); a file path resolves to its parent dir so daily/rotated siblings are
 // caught too. Returns "" when there's nothing to tail.
+// User-provided paths are restricted to the current working tree.
 func resolveLogsDir(flagVal string) string {
 	candidate := flagVal
 	autodetect := candidate == ""
 	if autodetect {
 		candidate = filepath.Join("storage", "logs")
 	}
-	fi, err := os.Stat(candidate)
+
+	baseDir, err := os.Getwd()
+	if err != nil {
+		log.Printf("debugd: could not resolve working directory: %v", err)
+		return ""
+	}
+	baseAbs, err := filepath.Abs(baseDir)
+	if err != nil {
+		log.Printf("debugd: could not resolve base path %q: %v", baseDir, err)
+		return ""
+	}
+	if resolvedBase, err := filepath.EvalSymlinks(baseAbs); err == nil {
+		baseAbs = resolvedBase
+	}
+
+	candidateAbs, err := filepath.Abs(candidate)
+	if err != nil {
+		if !autodetect {
+			log.Printf("debugd: invalid --logs path %q: %v", flagVal, err)
+		}
+		return ""
+	}
+	if resolvedCandidate, err := filepath.EvalSymlinks(candidateAbs); err == nil {
+		candidateAbs = resolvedCandidate
+	}
+
+	fi, err := os.Stat(candidateAbs)
 	if err != nil {
 		if !autodetect {
 			log.Printf("debugd: --logs path %q not found, log reader disabled", flagVal)
 		}
 		return ""
 	}
-	if fi.IsDir() {
-		return candidate
+
+	targetDir := candidateAbs
+	if !fi.IsDir() {
+		targetDir = filepath.Dir(candidateAbs)
 	}
-	return filepath.Dir(candidate)
+
+	rel, err := filepath.Rel(baseAbs, targetDir)
+	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(os.PathSeparator)) || filepath.IsAbs(rel) {
+		if !autodetect {
+			log.Printf("debugd: --logs path %q is outside allowed base %q", flagVal, baseAbs)
+		}
+		return ""
+	}
+	return targetDir
 }
 
 // configDir is where UI-saved settings live (~/.config/debugd on Linux/mac).
