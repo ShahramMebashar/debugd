@@ -199,6 +199,17 @@ func writeJSON(w http.ResponseWriter, v any) {
 // works); a file path resolves to its parent dir so daily/rotated siblings are
 // caught too. Returns "" when there's nothing to tail.
 // User-provided paths are restricted to the current working tree.
+func isWithinBase(baseAbs, targetAbs string) bool {
+	rel, err := filepath.Rel(baseAbs, targetAbs)
+	if err != nil {
+		return false
+	}
+	if rel == ".." || strings.HasPrefix(rel, ".."+string(os.PathSeparator)) || filepath.IsAbs(rel) {
+		return false
+	}
+	return true
+}
+
 func resolveLogsDir(flagVal string) string {
 	candidate := flagVal
 	autodetect := candidate == ""
@@ -238,6 +249,12 @@ func resolveLogsDir(flagVal string) string {
 	}
 	if resolvedCandidate, err := filepath.EvalSymlinks(candidateAbs); err == nil {
 		candidateAbs = resolvedCandidate
+	}
+	if !isWithinBase(baseAbs, candidateAbs) {
+		if !autodetect {
+			log.Printf("debugd: --logs path %q is outside allowed base %q", flagVal, baseAbs)
+		}
+		return ""
 	}
 
 	fi, err := os.Stat(candidateAbs)
