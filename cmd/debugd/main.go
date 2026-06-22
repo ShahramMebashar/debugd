@@ -220,7 +220,16 @@ func resolveLogsDir(flagVal string) string {
 		baseAbs = resolvedBase
 	}
 
-	candidateAbs, err := filepath.Abs(candidate)
+	candidateClean := filepath.Clean(candidate)
+	if !autodetect {
+		if candidateClean == "." || candidateClean == "" || filepath.IsAbs(candidateClean) ||
+			candidateClean == ".." || strings.HasPrefix(candidateClean, ".."+string(os.PathSeparator)) {
+			log.Printf("debugd: invalid --logs path %q", flagVal)
+			return ""
+		}
+	}
+
+	candidateAbs, err := filepath.Abs(filepath.Join(baseAbs, candidateClean))
 	if err != nil {
 		if !autodetect {
 			log.Printf("debugd: invalid --logs path %q: %v", flagVal, err)
