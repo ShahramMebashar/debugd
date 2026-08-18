@@ -107,7 +107,7 @@ jobs:
           find web/src-tauri/target/release/bundle -type f \( -name '*.dmg' -o -name '*.app.tar.gz' -o -name '*.app.tar.gz.sig' \) -print0 \
             | xargs -0 shasum -a 256 > desktop-macos-checksums.txt
       - name: Upload desktop artifacts to release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: |
             web/src-tauri/target/release/bundle/dmg/*.dmg
@@ -152,7 +152,7 @@ jobs:
           find web/src-tauri/target/release/bundle -type f \( -name '*.AppImage' -o -name '*.deb' \) -print0 \
             | xargs -0 shasum -a 256 > desktop-linux-checksums.txt
       - name: Upload desktop artifacts to release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: |
             web/src-tauri/target/release/bundle/appimage/*.AppImage
@@ -192,7 +192,7 @@ jobs:
             ForEach-Object { "$($_.Hash.ToLower())  $($_.Path)" } |
             Set-Content desktop-windows-checksums.txt
       - name: Upload desktop artifacts to release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: |
             web/src-tauri/target/release/bundle/nsis/*.exe
